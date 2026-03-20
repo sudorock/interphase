@@ -41,7 +41,7 @@ type Subs = {
 type Events = {
   'todo/create': Evt<{ text: string }>;
   'todo/toggle': Evt<{ id: string }>;
-  'todo.sort/set': Evt<{ value: SortBy }>;
+  'todo.sort-by/set': Evt<{ value: SortBy }>;
 };
 
 const registry = createRegistry<State, Subs, Events>();
@@ -71,7 +71,7 @@ evt('todo/toggle', async ({ params, invalidateAsyncSub, read }) => {
   await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
 
-evt('todo.sort/set', ({ params, setState }) => {
+evt('todo.sort-by/set', ({ params, setState }) => {
   setState((state) => {
     state.sortBy = params.value;
   });
@@ -91,7 +91,7 @@ const TodoList = suspensify(function TodoList() {
   const todos = useSub('todo/items', { sortBy });  // async, suspends until resolved
   const create = useEvent('todo/create');
   const toggle = useEvent('todo/toggle');
-  const setSort = useEvent('todo.sort/set');
+  const setSort = useEvent('todo.sort-by/set');
 
   return (
     <div>
@@ -158,7 +158,7 @@ Registers an event handler. The handler receives `{ setState, getState, read, pa
 `setState` uses immer. Mutate the draft directly.
 
 ```ts
-evt('todo.sort/set', ({ params, setState }) => {
+evt('todo.sort-by/set', ({ params, setState }) => {
   setState((state) => {
     state.sortBy = params.value;
   });
