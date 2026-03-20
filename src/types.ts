@@ -27,6 +27,10 @@ export type DispatchHook<Events extends StoreEvents> = <T extends keyof Events>(
   id: T
 ) => (params: Events[T]['params']) => void | Promise<void>;
 
+export type InvokeHook<Events extends StoreEvents> = <T extends keyof Events>(
+  id: T,
+  params: Events[T]['params']
+) => () => void | Promise<void>;
 
 export type InvalidateAsyncSub<Subs extends StoreSubs> = <T extends keyof Subs>(
   sub: [id: T, params: Subs[T]['params'] | undefined]

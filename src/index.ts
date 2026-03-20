@@ -8,7 +8,7 @@ export type {
   EventHandler,
   EventHandlerArgs,
   Evt,
-
+  InvokeHook,
   Slice,
   StoreEvents,
   StoreSubs,
