@@ -15,7 +15,7 @@ import type {
   DispatchHook,
   InvalidateAsyncSub,
   InvalidateAsyncSubs,
-  InvokeHook,
+
   Read,
   ReplaceAsyncSub,
   ReplaceAsyncSubs,
@@ -41,7 +41,7 @@ export type StoreBundle<
   StoreProvider: ({ children }: { children: ReactNode }) => ReactNode;
   useValue: ValueHook<Subs>;
   useDispatch: DispatchHook<Events>;
-  useInvoke: InvokeHook<Events>;
+
 };
 
 export function createStore<
@@ -173,13 +173,6 @@ export function createStore<
     return useDispatchImpl(id);
   };
 
-  const useInvoke: InvokeHook<Events> = (id, params) => {
-    const dispatch = useDispatch(id);
-    const paramsKey = JSON.stringify(params);
-
-    return useCallback(() => dispatch(params), [dispatch, paramsKey]);
-  };
-
   const StoreProvider = memo(({ children }: { children: ReactNode }) => {
     const scopeRef = useRef<ReturnType<typeof createProviderScope>>();
     if (!scopeRef.current) {
@@ -206,6 +199,6 @@ export function createStore<
     StoreProvider,
     useValue,
     useDispatch,
-    useInvoke,
+
   };
 }
