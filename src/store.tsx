@@ -84,9 +84,9 @@ export function createStore<
   );
 
   function queryFn({ queryKey }: any) {
-    const [id, params] = queryKey;
+    const [id, { params }] = queryKey;
     const subscription = registry.subscriptions[id]!;
-    return subscription.fn(params);
+    return subscription.fn({ state: getState(), params });
   }
 
   const queryClient = new QueryClient({
