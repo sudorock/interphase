@@ -67,7 +67,7 @@ export type EventHandlerArgs<
   Events extends StoreEvents,
   T extends keyof Events,
 > = {
-  setState: StoreApi<State>['setState'];
+  setState: (updater: State | Partial<State> | ((draft: State) => void)) => void;
   getState: StoreApi<State>['getState'];
   read: Read<Subs>;
   params: Events[T]['params'];

@@ -29,22 +29,29 @@ export function createTestStore() {
   registry.sub('doubled', ({ state }) => state.count * 2);
   registry.sub('countByFactor', ({ state, params }) => state.count * params.factor);
   registry.sub('labelUpper', ({ state }) => state.label.toUpperCase());
+  registry.sub('stats', ({ state }) => ({ count: state.count, label: state.label }));
   registry.asyncSub('asyncCount', async ({ state }) => state.count);
 
   registry.evt('increment', ({ setState }) => {
     setState(((draft: State) => {
       draft.count++;
-    }) as any);
+    }));
   });
   registry.evt('setCount', ({ setState, params }) => {
     setState(((draft: State) => {
       draft.count = params.value;
-    }) as any);
+    }));
   });
   registry.evt('setLabel', ({ setState, params }) => {
     setState(((draft: State) => {
       draft.label = params.value;
-    }) as any);
+    }));
+  });
+  registry.evt('setBoth', ({ setState, params }) => {
+    setState(((draft: State) => {
+      draft.count = params.count;
+      draft.label = params.label;
+    }));
   });
 
   const slices: Slice<State>[] = [() => ({ count: 0 }), () => ({ label: 'hello' })];

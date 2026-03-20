@@ -22,7 +22,7 @@ describe('createRegistry', () => {
   it('registers event handler', () => {
     const registry = createRegistry<State, Subs, Events>();
     registry.evt('increment', ({ setState }) => {
-      setState(((draft: State) => { draft.count++; }) as any);
+      setState(((draft: State) => { draft.count++; }));
     });
     expect(registry.events['increment']).toBeDefined();
   });
@@ -190,7 +190,7 @@ describe('useDispatch', () => {
     registry.sub('doubled', ({ state }) => state.count * 2);
     registry.evt('setCountFromDoubled', ({ read, setState }) => {
       const doubled = read('doubled');
-      setState(((draft: RState) => { draft.count = doubled; }) as any);
+      setState(((draft: RState) => { draft.count = doubled; }));
     });
 
     const { useValue, useDispatch, StoreProvider } = createStore<RState, RSubs, REvents>({
@@ -228,7 +228,7 @@ describe('useDispatch', () => {
     const registry = createRegistry<DState, DSubs, DEvents>();
     registry.sub('count', ({ state }) => state.count);
     registry.evt('increment', ({ setState }) => {
-      setState(((draft: DState) => { draft.count++; }) as any);
+      setState(((draft: DState) => { draft.count++; }));
     });
     registry.evt('doubleIncrement', ({ dispatch }) => {
       dispatch('increment');
