@@ -83,3 +83,14 @@ function Counter() {
   return <button onClick={() => increment({ amount: 1 })}>{count}</button>;
 }
 ```
+
+## Examples
+
+- `examples/todos` is a small Vite app that consumes `interphase` as a local package.
+- The example scripts build the library before starting or bundling the app.
+
+```bash
+cd examples/todos
+npm install
+npm run dev
+```

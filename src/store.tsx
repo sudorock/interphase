@@ -7,6 +7,8 @@ import { createContext, memo, type ReactNode, useCallback, useContext, useMemo }
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { shallow } from 'zustand/shallow';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 import type { Registry } from './registry';
 import type {
   Dispatch,
@@ -150,9 +152,13 @@ export function createStore<
 
   const useLocal: ValueHook<Subs> = (id, params) => {
     const subscription = registry.subscriptions[id]!;
-    return useStore((state) => {
-      return subscription.fn({ state, params }) as Subs[typeof id]['result'];
-    });
+    return useStoreWithEqualityFn(
+      useStore,
+      (state) => {
+        return subscription.fn({ state, params }) as Subs[typeof id]['result'];
+      },
+      shallow
+    );
   };
 
   const useValueImpl: ValueHook<Subs> = (id, params) => {
