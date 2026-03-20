@@ -162,8 +162,8 @@ describe('useShallow selector stability', () => {
     }
 
     function Controls() {
-      const setBoth = useDispatch('setBoth');
-      return <button onClick={() => setBoth({ count: 0, label: 'hello' })}>set-same</button>;
+      const toggleFlag = useDispatch('toggleFlag');
+      return <button onClick={() => toggleFlag(undefined as any)}>toggle-flag</button>;
     }
 
     render(
@@ -178,7 +178,7 @@ describe('useShallow selector stability', () => {
     expect(el.textContent).toBe('0,hello');
     const rendersBefore = Number(el.getAttribute('data-renders'));
 
-    fireEvent.click(screen.getByText('set-same'));
+    fireEvent.click(screen.getByText('toggle-flag'));
 
     const rendersAfter = Number(el.getAttribute('data-renders'));
     expect(rendersAfter).toBe(rendersBefore);

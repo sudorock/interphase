@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 import { createRegistry, createStore } from '../src/index';
 import type { Sub, Evt, Slice } from '../src/index';
 
-type State = { count: number; label: string };
+type State = { count: number; label: string; flag: boolean };
 
 type Subs = {
   count: Sub<void, number>;
@@ -17,6 +17,7 @@ type Events = {
   increment: Evt<void>;
   setCount: Evt<{ value: number }>;
   setLabel: Evt<{ value: string }>;
+  toggleFlag: Evt<void>;
   setBoth: Evt<{ count: number; label: string }>;
 };
 
@@ -47,6 +48,11 @@ export function createTestStore() {
       draft.label = params.value;
     }));
   });
+  registry.evt('toggleFlag', ({ setState }) => {
+    setState(((draft: State) => {
+      draft.flag = !draft.flag;
+    }));
+  });
   registry.evt('setBoth', ({ setState, params }) => {
     setState(((draft: State) => {
       draft.count = params.count;
@@ -54,7 +60,7 @@ export function createTestStore() {
     }));
   });
 
-  const slices: Slice<State>[] = [() => ({ count: 0 }), () => ({ label: 'hello' })];
+  const slices: Slice<State>[] = [() => ({ count: 0 }), () => ({ label: 'hello' }), () => ({ flag: false })];
 
   return createStore<State, Subs, Events>({ slices, registry });
 }
