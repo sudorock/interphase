@@ -1,28 +1,13 @@
 {
+  "extends": "./tsconfig.build.json",
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "esModuleInterop": false,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "lib": [
-      "DOM",
-      "ES2022"
-    ],
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "noEmitOnError": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "skipLibCheck": true,
-    "strict": true,
-    "target": "ES2022",
-    "verbatimModuleSyntax": true
+    "declaration": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "types": ["vitest/globals"]
   },
   "include": [
-    "src"
+    "src",
+    "tests"
   ]
 }
