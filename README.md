@@ -5,7 +5,7 @@ Reusable state-management runtime extracted from the Elements store.
 It keeps the original runtime model:
 
 - Zustand for local state
-- React Query v3 for async subscriptions
+- TanStack Query v5 for async subscriptions
 - typed subscriptions and events
 
 It does not include app policy:
@@ -18,7 +18,7 @@ It does not include app policy:
 ## Install
 
 ```bash
-npm install react react-query zustand immer
+npm install react @tanstack/react-query zustand immer
 ```
 
 ## Example

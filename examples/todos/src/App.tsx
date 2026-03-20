@@ -43,7 +43,7 @@ function Todos() {
         <h1>Todo state with sync and async subscriptions</h1>
         <p className="hero-copy">
           Local state lives in slices, derived reads are subscriptions, and UI actions dispatch
-          typed events. The tip panel is an async subscription backed by React Query suspense.
+          typed events. The tip panel is an async subscription backed by TanStack Query suspense.
         </p>
       </section>
 

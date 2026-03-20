@@ -1,8 +1,8 @@
 import {
   QueryClient,
   QueryClientProvider,
-  useQuery as useReactQuery,
-} from 'react-query';
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createContext, memo, type ReactNode, useCallback, useContext, useMemo } from 'react';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
@@ -93,7 +93,6 @@ export function createStore<
     defaultOptions: {
       queries: {
         queryFn,
-        suspense: true,
       },
     },
   });
@@ -146,7 +145,7 @@ export function createStore<
   };
 
   const useRemote: ValueHook<Subs> = (id, params) => {
-    const { data } = useReactQuery([id, { params }]);
+    const { data } = useSuspenseQuery({ queryKey: [id, { params }] });
     return data as Subs[typeof id]['result'];
   };
 
