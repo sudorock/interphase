@@ -4,11 +4,11 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createContext, memo, type ReactNode, useCallback, useContext, useMemo } from 'react';
-import { create } from 'zustand';
+import { useStore } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { shallow } from 'zustand/shallow';
-import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { useShallow } from 'zustand/react/shallow';
+import { createStore as createStateStore } from 'zustand/vanilla';
 import type { Registry } from './registry';
 import type {
   Dispatch,
@@ -75,7 +75,7 @@ export function createStore<
     return Object.assign(acc, slice());
   }, {}) as State;
 
-  const useStore = create<State>()(
+  const stateStore = createStateStore<State>()(
     devtools(
       immer(() => {
         return initialState;
@@ -97,8 +97,8 @@ export function createStore<
     },
   });
 
-  const setState = useStore.setState;
-  const getState = useStore.getState;
+  const setState = stateStore.setState;
+  const getState = stateStore.getState;
 
   const invalidateAsyncSub: InvalidateAsyncSub<Subs> = async (sub) => {
     const [id, params] = sub;
@@ -151,13 +151,11 @@ export function createStore<
 
   const useLocal: ValueHook<Subs> = (id, params) => {
     const subscription = registry.subscriptions[id]!;
-    return useStoreWithEqualityFn(
-      useStore,
-      (state) => {
-        return subscription.fn({ state, params }) as Subs[typeof id]['result'];
-      },
-      shallow
-    );
+    const selector = useShallow((state) => {
+      return subscription.fn({ state, params }) as Subs[typeof id]['result'];
+    });
+
+    return useStore(stateStore, selector);
   };
 
   const useValueImpl: ValueHook<Subs> = (id, params) => {
