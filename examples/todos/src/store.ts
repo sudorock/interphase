@@ -42,7 +42,7 @@ const nextTip = () => {
   return tips[Math.floor(Math.random() * tips.length)];
 };
 
-const registry = createRegistry<Subs, Events>();
+const registry = createRegistry<State, Subs, Events>();
 const { sub, asyncSub, evt } = registry;
 
 sub('todo.list/items', ({ state }) => {
