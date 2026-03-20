@@ -13,8 +13,10 @@ interphase unifies both behind a single `useSub` hook. Components read state the
 ## Install
 
 ```bash
-npm install interphase
+npm install @aktopia/interphase
 ```
+
+Package: [@aktopia/interphase](https://www.npmjs.com/package/@aktopia/interphase)
 
 Peer dependencies: `react`, `zustand`, `@tanstack/react-query`.
 Direct dependency (bundled): `immer`.
@@ -22,7 +24,7 @@ Direct dependency (bundled): `immer`.
 ## Quick start
 
 ```ts
-import { createRegistry, createStore, suspensify, type Evt, type Sub } from 'interphase';
+import { createRegistry, createStore, suspensify, type Evt, type Sub } from '@aktopia/interphase';
 
 type Todo = { id: string; text: string; done: boolean };
 type SortBy = 'newest' | 'oldest' | 'alphabetical';
@@ -271,7 +273,7 @@ remoteSub('todo/items');
 
 ## Examples
 
-`examples/todos` is a small Vite app that consumes `interphase` as a local package.
+`examples/todos` is a small Vite app that consumes `@aktopia/interphase` as a local package.
 
 ```bash
 cd examples/todos
