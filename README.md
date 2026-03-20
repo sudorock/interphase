@@ -32,8 +32,8 @@ type State = {
 };
 
 type Subs = {
-  'todo.sort/value': Sub<{}, SortBy>;
-  'todo.list/items': Sub<{ sortBy: SortBy }, Todo[]>;
+  'todo/sort-by': Sub<{}, SortBy>;
+  'todo/items': Sub<{ sortBy: SortBy }, Todo[]>;
 };
 
 type Events = {
@@ -45,28 +45,28 @@ type Events = {
 const registry = createRegistry<State, Subs, Events>();
 const { sub, asyncSub, evt } = registry;
 
-sub('todo.sort/value', ({ state }) => state.sortBy);
+sub('todo/sort-by', ({ state }) => state.sortBy);
 
 // Async subscription -- same useValue call site, backed by TanStack Query + Suspense
-asyncSub('todo.list/items', async ({ params }) => {
+asyncSub('todo/items', async ({ params }) => {
   const res = await fetch(`/api/todos?sort=${params.sortBy}`);
   return res.json();
 });
 
 evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
-  const sortBy = read('todo.sort/value');
+  const sortBy = read('todo/sort-by');
   await fetch('/api/todos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: params.text }),
   });
-  await invalidateAsyncSub(['todo.list/items', { sortBy }]);
+  await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
 
 evt('todo/toggle', async ({ params, invalidateAsyncSub, read }) => {
-  const sortBy = read('todo.sort/value');
+  const sortBy = read('todo/sort-by');
   await fetch(`/api/todos/${params.id}/toggle`, { method: 'POST' });
-  await invalidateAsyncSub(['todo.list/items', { sortBy }]);
+  await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
 
 evt('todo.sort/set', ({ params, setState }) => {
@@ -85,8 +85,8 @@ export const { StoreProvider, useValue, useDispatch } = store;
 
 ```tsx
 const TodoList = suspensify(function TodoList() {
-  const sortBy = useValue('todo.sort/value');             // sync
-  const todos = useValue('todo.list/items', { sortBy });  // async -- suspends until resolved
+  const sortBy = useValue('todo/sort-by');             // sync
+  const todos = useValue('todo/items', { sortBy });  // async -- suspends until resolved
   const create = useDispatch('todo/create');
   const toggle = useDispatch('todo/toggle');
   const setSort = useDispatch('todo.sort/set');
@@ -135,7 +135,7 @@ const { sub, asyncSub, evt } = registry;
 Registers a sync subscription. The resolver receives `{ state, params }` and returns the derived value.
 
 ```ts
-sub('todo.sort/value', ({ state }) => state.sortBy);
+sub('todo/sort-by', ({ state }) => state.sortBy);
 ```
 
 ### `asyncSub(id, resolver)`
@@ -143,7 +143,7 @@ sub('todo.sort/value', ({ state }) => state.sortBy);
 Registers an async subscription. The resolver returns a `Promise`. Async subscriptions are backed by TanStack Query and integrate with React Suspense.
 
 ```ts
-asyncSub('todo.list/items', async ({ params }) => {
+asyncSub('todo/items', async ({ params }) => {
   const res = await fetch(`/api/todos?sort=${params.sortBy}`);
   return res.json();
 });
@@ -167,13 +167,13 @@ Event handlers can invalidate async subscriptions to trigger a refetch:
 
 ```ts
 evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
-  const sortBy = read('todo.sort/value');
+  const sortBy = read('todo/sort-by');
   await fetch('/api/todos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: params.text }),
   });
-  await invalidateAsyncSub(['todo.list/items', { sortBy }]);
+  await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
 ```
 
@@ -199,8 +199,8 @@ export const { StoreProvider, useValue, useDispatch, useInvoke } = store;
 Single hook for reading both sync and async subscriptions. The call site is identical regardless of backing.
 
 ```tsx
-const sortBy = useValue('todo.sort/value');             // sync
-const todos = useValue('todo.list/items', { sortBy });  // async (suspends)
+const sortBy = useValue('todo/sort-by');             // sync
+const todos = useValue('todo/items', { sortBy });  // async (suspends)
 ```
 
 ### `useDispatch(id)`
@@ -239,7 +239,7 @@ With `suspensify`:
 
 ```tsx
 const TodoList = suspensify(function TodoList() {
-  const todos = useValue('todo.list/items', { sortBy });
+  const todos = useValue('todo/items', { sortBy });
   // ...
 });
 
@@ -266,7 +266,7 @@ const remoteSub = <T extends keyof Subs>(id: T) => {
 One line to connect a subscription to an API:
 
 ```ts
-remoteSub('todo.list/items');
+remoteSub('todo/items');
 ```
 
 ## Examples
