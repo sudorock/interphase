@@ -3,7 +3,7 @@ import {
   QueryClientProvider,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createContext, memo, type ReactNode, useCallback, useContext, useMemo } from 'react';
+import { createContext, memo, type ReactNode, useCallback, useContext, useMemo, useRef } from 'react';
 import { useStore } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -42,12 +42,6 @@ export type StoreBundle<
   useValue: ValueHook<Subs>;
   useDispatch: DispatchHook<Events>;
   useInvoke: InvokeHook<Events>;
-  read: Read<Subs>;
-  dispatch: Dispatch<Events>;
-  invalidateAsyncSub: InvalidateAsyncSub<Subs>;
-  invalidateAsyncSubs: InvalidateAsyncSubs<Subs>;
-  replaceAsyncSub: ReplaceAsyncSub<Subs>;
-  replaceAsyncSubs: ReplaceAsyncSubs<Subs>;
 };
 
 export function createStore<
@@ -71,100 +65,102 @@ export function createStore<
 
   const StoreContext = createContext<StoreContextType>(placeholderContext);
 
-  const initialState = slices.reduce<Partial<State>>((acc, slice) => {
-    return Object.assign(acc, slice());
-  }, {}) as State;
+  function createProviderScope() {
+    const initialState = slices.reduce<Partial<State>>((acc, slice) => {
+      return Object.assign(acc, slice());
+    }, {}) as State;
 
-  const stateStore = createStateStore<State>()(
-    devtools(
-      immer(() => {
-        return initialState;
-      })
-    )
-  );
+    const stateStore = createStateStore<State>()(
+      devtools(
+        immer(() => {
+          return initialState;
+        })
+      )
+    );
 
-  function queryFn({ queryKey }: any) {
-    const [id, { params }] = queryKey;
-    const subscription = registry.subscriptions[id]!;
-    return subscription.fn({ state: getState(), params });
-  }
-
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        queryFn,
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          queryFn: ({ queryKey }: any) => {
+            const [id, { params }] = queryKey;
+            const subscription = registry.subscriptions[id]!;
+            return subscription.fn({ state: stateStore.getState(), params });
+          },
+        },
       },
-    },
-  });
-
-  const setState = stateStore.setState;
-  const getState = stateStore.getState;
-
-  const invalidateAsyncSub: InvalidateAsyncSub<Subs> = async (sub) => {
-    const [id, params] = sub;
-    await queryClient.invalidateQueries({ queryKey: [id, { params }] });
-  };
-
-  const invalidateAsyncSubs: InvalidateAsyncSubs<Subs> = async (subs) => {
-    await Promise.all(subs.map(([id, params]) => invalidateAsyncSub([id, params])));
-  };
-
-  const replaceAsyncSub: ReplaceAsyncSub<Subs> = (sub, updater) => {
-    const [id, params] = sub;
-    queryClient.setQueryData([id, { params }], updater);
-  };
-
-  const replaceAsyncSubs: ReplaceAsyncSubs<Subs> = (subs) => {
-    for (const sub of subs) {
-      const [[id, params], updater] = sub;
-      queryClient.setQueryData([id, { params }], updater);
-    }
-  };
-
-  const dispatch: Dispatch<Events> = (id, params?) => {
-    const event = registry.events[id]!;
-    return event.fn({
-      setState,
-      getState,
-      params,
-      read,
-      dispatch,
-      invalidateAsyncSub,
-      invalidateAsyncSubs,
-      replaceAsyncSub,
-      replaceAsyncSubs,
     });
-  };
 
-  const read: Read<Subs> = (id, params?) => {
-    const subscription = registry.subscriptions[id]!;
+    const setState = stateStore.setState;
+    const getState = stateStore.getState;
 
-    return subscription.async
-      ? (queryClient.getQueryState([id, { params }])?.data as Subs[typeof id]['result'])
-      : (subscription.fn({ state: getState(), params }) as Subs[typeof id]['result']);
-  };
+    const invalidateAsyncSub: InvalidateAsyncSub<Subs> = async (sub) => {
+      const [id, params] = sub;
+      await queryClient.invalidateQueries({ queryKey: [id, { params }] });
+    };
+
+    const invalidateAsyncSubs: InvalidateAsyncSubs<Subs> = async (subs) => {
+      await Promise.all(subs.map(([id, params]) => invalidateAsyncSub([id, params])));
+    };
+
+    const replaceAsyncSub: ReplaceAsyncSub<Subs> = (sub, updater) => {
+      const [id, params] = sub;
+      queryClient.setQueryData([id, { params }], updater);
+    };
+
+    const replaceAsyncSubs: ReplaceAsyncSubs<Subs> = (subs) => {
+      for (const sub of subs) {
+        const [[id, params], updater] = sub;
+        queryClient.setQueryData([id, { params }], updater);
+      }
+    };
+
+    const read: Read<Subs> = (id, params?) => {
+      const subscription = registry.subscriptions[id]!;
+
+      return subscription.async
+        ? (queryClient.getQueryState([id, { params }])?.data as Subs[typeof id]['result'])
+        : (subscription.fn({ state: getState(), params }) as Subs[typeof id]['result']);
+    };
+
+    const dispatch: Dispatch<Events> = (id, params?) => {
+      const event = registry.events[id]!;
+      return event.fn({
+        setState,
+        getState,
+        params,
+        read,
+        dispatch,
+        invalidateAsyncSub,
+        invalidateAsyncSubs,
+        replaceAsyncSub,
+        replaceAsyncSubs,
+      });
+    };
+
+    const useLocal: ValueHook<Subs> = (id, params) => {
+      const subscription = registry.subscriptions[id]!;
+      const selector = useShallow((state: State) => {
+        return subscription.fn({ state, params }) as Subs[typeof id]['result'];
+      });
+
+      return useStore(stateStore, selector);
+    };
+
+    const useValueImpl: ValueHook<Subs> = (id, params) => {
+      const useValue = registry.subscriptions[id]!.async ? useRemote : useLocal;
+      return useValue(id, params);
+    };
+
+    const useDispatchImpl: DispatchHook<Events> = (id) => {
+      return useCallback((params) => dispatch(id, params), [id]);
+    };
+
+    return { stateStore, queryClient, useValueImpl, useDispatchImpl };
+  }
 
   const useRemote: ValueHook<Subs> = (id, params) => {
     const { data } = useSuspenseQuery({ queryKey: [id, { params }] });
     return data as Subs[typeof id]['result'];
-  };
-
-  const useLocal: ValueHook<Subs> = (id, params) => {
-    const subscription = registry.subscriptions[id]!;
-    const selector = useShallow((state) => {
-      return subscription.fn({ state, params }) as Subs[typeof id]['result'];
-    });
-
-    return useStore(stateStore, selector);
-  };
-
-  const useValueImpl: ValueHook<Subs> = (id, params) => {
-    const useValue = registry.subscriptions[id]!.async ? useRemote : useLocal;
-    return useValue(id, params);
-  };
-
-  const useDispatchImpl: DispatchHook<Events> = (id) => {
-    return useCallback((params) => dispatch(id, params), [id]);
   };
 
   const useValue: ValueHook<Subs> = (id, params) => {
@@ -185,6 +181,12 @@ export function createStore<
   };
 
   const StoreProvider = memo(({ children }: { children: ReactNode }) => {
+    const scopeRef = useRef<ReturnType<typeof createProviderScope>>();
+    if (!scopeRef.current) {
+      scopeRef.current = createProviderScope();
+    }
+    const { queryClient, useValueImpl, useDispatchImpl } = scopeRef.current;
+
     const ctx = useMemo(
       () => ({
         useValueImpl,
@@ -205,11 +207,5 @@ export function createStore<
     useValue,
     useDispatch,
     useInvoke,
-    read,
-    dispatch,
-    invalidateAsyncSub,
-    invalidateAsyncSubs,
-    replaceAsyncSub,
-    replaceAsyncSubs,
   };
 }
