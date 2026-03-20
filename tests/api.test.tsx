@@ -28,14 +28,14 @@ describe('createRegistry', () => {
   });
 });
 
-// --- useValue (sync) ---
+// --- useSub (sync) ---
 
-describe('useValue (sync)', () => {
+describe('useSub (sync)', () => {
   it('reads initial sync value', () => {
-    const { useValue, StoreProvider } = createTestStore();
+    const { useSub, StoreProvider } = createTestStore();
 
     function Display() {
-      const count = useValue('count');
+      const count = useSub('count');
       return <div data-testid="count">{count}</div>;
     }
 
@@ -44,11 +44,11 @@ describe('useValue (sync)', () => {
   });
 
   it('reads derived sync value after dispatch', () => {
-    const { useValue, useDispatch, StoreProvider } = createTestStore();
+    const { useSub, useEvent, StoreProvider } = createTestStore();
 
     function Display() {
-      const doubled = useValue('doubled');
-      const dispatch = useDispatch('setCount');
+      const doubled = useSub('doubled');
+      const dispatch = useEvent('setCount');
       return (
         <>
           <div data-testid="doubled">{doubled}</div>
@@ -65,11 +65,11 @@ describe('useValue (sync)', () => {
   });
 
   it('reads sync subscription with params', () => {
-    const { useValue, useDispatch, StoreProvider } = createTestStore();
+    const { useSub, useEvent, StoreProvider } = createTestStore();
 
     function Display() {
-      const result = useValue('countByFactor', { factor: 3 });
-      const dispatch = useDispatch('setCount');
+      const result = useSub('countByFactor', { factor: 3 });
+      const dispatch = useEvent('setCount');
       return (
         <>
           <div data-testid="result">{result}</div>
@@ -86,14 +86,14 @@ describe('useValue (sync)', () => {
   });
 });
 
-// --- useValue (async) ---
+// --- useSub (async) ---
 
-describe('useValue (async)', () => {
+describe('useSub (async)', () => {
   it('reads async subscription with Suspense', async () => {
-    const { useValue, StoreProvider } = createTestStore();
+    const { useSub, StoreProvider } = createTestStore();
 
     function Display() {
-      const count = useValue('asyncCount');
+      const count = useSub('asyncCount');
       return <div data-testid="async-count">{count}</div>;
     }
 
@@ -114,13 +114,13 @@ describe('useValue (async)', () => {
       return `item-${params.id}`;
     });
 
-    const { useValue, StoreProvider } = createStore<AState, ASubs, AEvents>({
+    const { useSub, StoreProvider } = createStore<AState, ASubs, AEvents>({
       slices: [],
       registry,
     });
 
     function Display() {
-      const value = useValue('data', { id: 42 });
+      const value = useSub('data', { id: 42 });
       return <div data-testid="value">{value}</div>;
     }
 
@@ -137,15 +137,15 @@ describe('useValue (async)', () => {
   });
 });
 
-// --- useDispatch ---
+// --- useEvent ---
 
-describe('useDispatch', () => {
+describe('useEvent', () => {
   it('dispatches event that modifies state', () => {
-    const { useValue, useDispatch, StoreProvider } = createTestStore();
+    const { useSub, useEvent, StoreProvider } = createTestStore();
 
     function Display() {
-      const count = useValue('count');
-      const dispatch = useDispatch('setCount');
+      const count = useSub('count');
+      const dispatch = useEvent('setCount');
       return (
         <>
           <div data-testid="count">{count}</div>
@@ -160,11 +160,11 @@ describe('useDispatch', () => {
   });
 
   it('event handler uses immer-style setState', () => {
-    const { useValue, useDispatch, StoreProvider } = createTestStore();
+    const { useSub, useEvent, StoreProvider } = createTestStore();
 
     function Display() {
-      const count = useValue('count');
-      const dispatch = useDispatch('increment');
+      const count = useSub('count');
+      const dispatch = useEvent('increment');
       return (
         <>
           <div data-testid="count">{count}</div>
@@ -193,14 +193,14 @@ describe('useDispatch', () => {
       setState(((draft: RState) => { draft.count = doubled; }));
     });
 
-    const { useValue, useDispatch, StoreProvider } = createStore<RState, RSubs, REvents>({
+    const { useSub, useEvent, StoreProvider } = createStore<RState, RSubs, REvents>({
       slices: [() => ({ count: 3 })],
       registry,
     });
 
     function Display() {
-      const count = useValue('count');
-      const dispatch = useDispatch('setCountFromDoubled');
+      const count = useSub('count');
+      const dispatch = useEvent('setCountFromDoubled');
       return (
         <>
           <div data-testid="count">{count}</div>
@@ -235,14 +235,14 @@ describe('useDispatch', () => {
       dispatch('increment');
     });
 
-    const { useValue, useDispatch, StoreProvider } = createStore<DState, DSubs, DEvents>({
+    const { useSub, useEvent, StoreProvider } = createStore<DState, DSubs, DEvents>({
       slices: [() => ({ count: 0 })],
       registry,
     });
 
     function Display() {
-      const count = useValue('count');
-      const dispatch = useDispatch('doubleIncrement');
+      const count = useSub('count');
+      const dispatch = useEvent('doubleIncrement');
       return (
         <>
           <div data-testid="count">{count}</div>
@@ -276,14 +276,14 @@ describe('useDispatch', () => {
       await invalidateAsyncSub(['data', undefined]);
     });
 
-    const { useValue, useDispatch, StoreProvider } = createStore<IState, ISubs, IEvents>({
+    const { useSub, useEvent, StoreProvider } = createStore<IState, ISubs, IEvents>({
       slices: [],
       registry,
     });
 
     function Display() {
-      const data = useValue('data');
-      const dispatch = useDispatch('refresh');
+      const data = useSub('data');
+      const dispatch = useEvent('refresh');
       return (
         <>
           <div data-testid="data">{data}</div>
@@ -319,14 +319,14 @@ describe('useDispatch', () => {
       replaceAsyncSub(['data', undefined], params.value);
     });
 
-    const { useValue, useDispatch, StoreProvider } = createStore<RState, RSubs, REvents>({
+    const { useSub, useEvent, StoreProvider } = createStore<RState, RSubs, REvents>({
       slices: [],
       registry,
     });
 
     function Display() {
-      const data = useValue('data');
-      const dispatch = useDispatch('replace');
+      const data = useSub('data');
+      const dispatch = useEvent('replace');
       return (
         <>
           <div data-testid="data">{data}</div>
@@ -350,15 +350,15 @@ describe('useDispatch', () => {
   });
 });
 
-// --- useInvoke ---
+// --- useBoundEvent ---
 
-describe('useInvoke', () => {
+describe('useBoundEvent', () => {
   it('returns callback that dispatches with bound params', () => {
-    const { useValue, useInvoke, StoreProvider } = createTestStore();
+    const { useSub, useBoundEvent, StoreProvider } = createTestStore();
 
     function Display() {
-      const count = useValue('count');
-      const invoke = useInvoke('setCount', { value: 99 });
+      const count = useSub('count');
+      const invoke = useBoundEvent('setCount', { value: 99 });
       return (
         <>
           <div data-testid="count">{count}</div>
@@ -377,11 +377,11 @@ describe('useInvoke', () => {
 
 describe('provider scoping', () => {
   it('two providers maintain isolated state', () => {
-    const { useValue, useDispatch, StoreProvider } = createTestStore();
+    const { useSub, useEvent, StoreProvider } = createTestStore();
 
     function Display({ label }: { label: string }) {
-      const count = useValue('count');
-      const dispatch = useDispatch('setCount');
+      const count = useSub('count');
+      const dispatch = useEvent('setCount');
       return (
         <>
           <div data-testid={`count-${label}`}>{count}</div>
@@ -420,13 +420,13 @@ describe('suspensify', () => {
     const registry = createRegistry<SState, SSubs, SEvents>();
     registry.asyncSub('data', async () => 'resolved-value');
 
-    const { useValue, StoreProvider } = createStore<SState, SSubs, SEvents>({
+    const { useSub, StoreProvider } = createStore<SState, SSubs, SEvents>({
       slices: [],
       registry,
     });
 
     function Inner() {
-      const data = useValue('data');
+      const data = useSub('data');
       return <div data-testid="data">{data}</div>;
     }
 

@@ -1,10 +1,10 @@
 import { Suspense, type FormEvent } from 'react';
-import { StoreProvider, useDispatch, useValue } from './store';
+import { StoreProvider, useEvent, useSub } from './store';
 import './styles.css';
 
 function TipCard() {
-  const tip = useValue('todo.tip/text');
-  const refresh = useDispatch('todo.tip/refresh');
+  const tip = useSub('todo.tip/text');
+  const refresh = useEvent('todo.tip/refresh');
 
   return (
     <section className="tip-card">
@@ -21,15 +21,15 @@ function TipCard() {
 }
 
 function Todos() {
-  const todos = useValue('todo.list/items');
-  const stats = useValue('todo.list/stats');
-  const draft = useValue('todo.draft/value');
-  const filter = useValue('todo.filter/value');
-  const setDraft = useDispatch('todo.draft/set');
-  const addTodo = useDispatch('todo/create');
-  const toggleTodo = useDispatch('todo/toggle');
-  const removeTodo = useDispatch('todo/delete');
-  const setFilter = useDispatch('todo.filter/set');
+  const todos = useSub('todo.list/items');
+  const stats = useSub('todo.list/stats');
+  const draft = useSub('todo.draft/value');
+  const filter = useSub('todo.filter/value');
+  const setDraft = useEvent('todo.draft/set');
+  const addTodo = useEvent('todo/create');
+  const toggleTodo = useEvent('todo/toggle');
+  const removeTodo = useEvent('todo/delete');
+  const setFilter = useEvent('todo.filter/set');
 
   const submit = (event: FormEvent) => {
     event.preventDefault();

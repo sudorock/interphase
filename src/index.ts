@@ -11,7 +11,7 @@ export type { SuspensifyProps } from './suspensify';
 export type { Sub, Evt, StoreSubs, StoreEvents, Slice } from './types';
 
 // Hooks
-export type { ValueHook, DispatchHook, InvokeHook } from './types';
+export type { SubHook, EventHook, BoundEventHook } from './types';
 
 // Event handling
 export type {

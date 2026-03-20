@@ -18,16 +18,16 @@ export type Dispatch<Events extends StoreEvents> = <T extends keyof Events>(
   params?: Events[T]['params']
 ) => void | Promise<void>;
 
-export type ValueHook<Subs extends StoreSubs> = <T extends keyof Subs>(
+export type SubHook<Subs extends StoreSubs> = <T extends keyof Subs>(
   id: T,
   params?: Subs[T]['params']
 ) => Subs[T]['result'];
 
-export type DispatchHook<Events extends StoreEvents> = <T extends keyof Events>(
+export type EventHook<Events extends StoreEvents> = <T extends keyof Events>(
   id: T
 ) => (params: Events[T]['params']) => void | Promise<void>;
 
-export type InvokeHook<Events extends StoreEvents> = <T extends keyof Events>(
+export type BoundEventHook<Events extends StoreEvents> = <T extends keyof Events>(
   id: T,
   params: Events[T]['params']
 ) => () => void | Promise<void>;

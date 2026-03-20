@@ -11,18 +11,18 @@ import { useShallow } from 'zustand/react/shallow';
 import { createStore as createStateStore } from 'zustand/vanilla';
 import type { Registry } from './registry';
 import type {
+  BoundEventHook,
   Dispatch,
-  DispatchHook,
+  EventHook,
   InvalidateAsyncSub,
   InvalidateAsyncSubs,
-  InvokeHook,
   Read,
   ReplaceAsyncSub,
   ReplaceAsyncSubs,
   Slice,
   StoreEvents,
   StoreSubs,
-  ValueHook,
+  SubHook,
 } from './types';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -56,9 +56,9 @@ export type StoreBundle<
   Events extends StoreEvents,
 > = {
   StoreProvider: ({ children }: { children: ReactNode }) => ReactNode;
-  useValue: ValueHook<Subs>;
-  useDispatch: DispatchHook<Events>;
-  useInvoke: InvokeHook<Events>;
+  useSub: SubHook<Subs>;
+  useEvent: EventHook<Events>;
+  useBoundEvent: BoundEventHook<Events>;
 };
 
 export function createStore<
@@ -67,16 +67,16 @@ export function createStore<
   Events extends StoreEvents,
 >({ slices, registry }: CreateStoreArgs<State, Subs, Events>): StoreBundle<Subs, Events> {
   type StoreContextType = {
-    useValueImpl: ValueHook<Subs>;
-    useDispatchImpl: DispatchHook<Events>;
+    useSubImpl: SubHook<Subs>;
+    useEventImpl: EventHook<Events>;
   };
 
   const placeholderContext: StoreContextType = {
-    useValueImpl: (_id, _params) => {
-      throw new Error('"useValue" not set for StoreContext');
+    useSubImpl: (_id, _params) => {
+      throw new Error('"useSub" not set for StoreContext');
     },
-    useDispatchImpl: (_id) => {
-      throw new Error('"useDispatch" not set for StoreContext');
+    useEventImpl: (_id) => {
+      throw new Error('"useEvent" not set for StoreContext');
     },
   };
 
@@ -154,7 +154,7 @@ export function createStore<
       });
     };
 
-    const useLocal: ValueHook<Subs> = (id, params) => {
+    const useLocal: SubHook<Subs> = (id, params) => {
       const subscription = registry.subscriptions[id]!;
       const selector = useShallow((state: State) => {
         return subscription.fn({ state, params }) as Subs[typeof id]['result'];
@@ -163,35 +163,35 @@ export function createStore<
       return useStore(stateStore, selector);
     };
 
-    const useValueImpl: ValueHook<Subs> = (id, params) => {
-      const useValue = registry.subscriptions[id]!.async ? useRemote : useLocal;
-      return useValue(id, params);
+    const useSubImpl: SubHook<Subs> = (id, params) => {
+      const useSub = registry.subscriptions[id]!.async ? useRemote : useLocal;
+      return useSub(id, params);
     };
 
-    const useDispatchImpl: DispatchHook<Events> = (id) => {
+    const useEventImpl: EventHook<Events> = (id) => {
       return useCallback((params) => dispatch(id, params), [id]);
     };
 
-    return { stateStore, queryClient, useValueImpl, useDispatchImpl };
+    return { stateStore, queryClient, useSubImpl, useEventImpl };
   }
 
-  const useRemote: ValueHook<Subs> = (id, params) => {
+  const useRemote: SubHook<Subs> = (id, params) => {
     const { data } = useSuspenseQuery({ queryKey: [id, { params }] });
     return data as Subs[typeof id]['result'];
   };
 
-  const useValue: ValueHook<Subs> = (id, params) => {
-    const { useValueImpl } = useContext(StoreContext);
-    return useValueImpl(id, params);
+  const useSub: SubHook<Subs> = (id, params) => {
+    const { useSubImpl } = useContext(StoreContext);
+    return useSubImpl(id, params);
   };
 
-  const useDispatch: DispatchHook<Events> = (id) => {
-    const { useDispatchImpl } = useContext(StoreContext);
-    return useDispatchImpl(id);
+  const useEvent: EventHook<Events> = (id) => {
+    const { useEventImpl } = useContext(StoreContext);
+    return useEventImpl(id);
   };
 
-  const useInvoke: InvokeHook<Events> = (id, params) => {
-    const dispatch = useDispatch(id);
+  const useBoundEvent: BoundEventHook<Events> = (id, params) => {
+    const dispatch = useEvent(id);
     const paramsHash = hashKey(params);
 
     return useCallback(() => dispatch(params), [dispatch, paramsHash]);
@@ -202,12 +202,12 @@ export function createStore<
     if (!scopeRef.current) {
       scopeRef.current = createProviderScope();
     }
-    const { queryClient, useValueImpl, useDispatchImpl } = scopeRef.current;
+    const { queryClient, useSubImpl, useEventImpl } = scopeRef.current;
 
     const ctx = useMemo(
       () => ({
-        useValueImpl,
-        useDispatchImpl,
+        useSubImpl,
+        useEventImpl,
       }),
       []
     );
@@ -221,8 +221,8 @@ export function createStore<
 
   return {
     StoreProvider,
-    useValue,
-    useDispatch,
-    useInvoke,
+    useSub,
+    useEvent,
+    useBoundEvent,
   };
 }

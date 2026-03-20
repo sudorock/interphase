@@ -6,7 +6,7 @@ Reactive state for React where sync and async feel the same.
 
 State in UI apps splits into two worlds: local (immediate) and remote/async (loading, error, pending). This split leaks into component code -- different hooks, different patterns, conditional rendering for loading states.
 
-interphase unifies both behind a single `useValue` hook. Components read state the same way regardless of source. Sync subscriptions resolve from Zustand state, async subscriptions resolve through TanStack Query with Suspense -- but the call site is identical.
+interphase unifies both behind a single `useSub` hook. Components read state the same way regardless of source. Sync subscriptions resolve from Zustand state, async subscriptions resolve through TanStack Query with Suspense -- but the call site is identical.
 
 `suspensify` bridges async subscriptions to React Suspense, giving a natural fallback UI without manual loading checks.
 
@@ -47,7 +47,7 @@ const { sub, asyncSub, evt } = registry;
 
 sub('todo/sort-by', ({ state }) => state.sortBy);
 
-// Async subscription -- same useValue call site, backed by TanStack Query + Suspense
+// Async subscription -- same useSub call site, backed by TanStack Query + Suspense
 asyncSub('todo/items', async ({ params }) => {
   const res = await fetch(`/api/todos?sort=${params.sortBy}`);
   return res.json();
@@ -80,16 +80,16 @@ const store = createStore<State, Subs, Events>({
   slices: [() => ({ sortBy: 'newest' })],
 });
 
-export const { StoreProvider, useValue, useDispatch } = store;
+export const { StoreProvider, useSub, useEvent } = store;
 ```
 
 ```tsx
 const TodoList = suspensify(function TodoList() {
-  const sortBy = useValue('todo/sort-by');             // sync
-  const todos = useValue('todo/items', { sortBy });  // async -- suspends until resolved
-  const create = useDispatch('todo/create');
-  const toggle = useDispatch('todo/toggle');
-  const setSort = useDispatch('todo.sort/set');
+  const sortBy = useSub('todo/sort-by');             // sync
+  const todos = useSub('todo/items', { sortBy });  // async -- suspends until resolved
+  const create = useEvent('todo/create');
+  const toggle = useEvent('todo/toggle');
+  const setSort = useEvent('todo.sort/set');
 
   return (
     <div>
@@ -179,7 +179,7 @@ evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
 
 ### `createStore({ registry, slices })`
 
-Creates the store from a registry and initial state slices. Returns `{ StoreProvider, useValue, useDispatch, useInvoke }`.
+Creates the store from a registry and initial state slices. Returns `{ StoreProvider, useSub, useEvent, useBoundEvent }`.
 
 Each slice is a function returning a partial state object. Slices are merged to form the initial state.
 
@@ -191,34 +191,34 @@ const store = createStore<State, Subs, Events>({
   ],
 });
 
-export const { StoreProvider, useValue, useDispatch, useInvoke } = store;
+export const { StoreProvider, useSub, useEvent, useBoundEvent } = store;
 ```
 
-### `useValue(id, params?)`
+### `useSub(id, params?)`
 
 Single hook for reading both sync and async subscriptions. The call site is identical regardless of backing.
 
 ```tsx
-const sortBy = useValue('todo/sort-by');             // sync
-const todos = useValue('todo/items', { sortBy });  // async (suspends)
+const sortBy = useSub('todo/sort-by');             // sync
+const todos = useSub('todo/items', { sortBy });  // async (suspends)
 ```
 
-### `useDispatch(id)`
+### `useEvent(id)`
 
 Returns a stable dispatcher function for the given event.
 
 ```tsx
-const create = useDispatch('todo/create');
+const create = useEvent('todo/create');
 // ...
 <button onClick={() => create({ text: 'New task' })}>Add</button>
 ```
 
-### `useInvoke(id, params)`
+### `useBoundEvent(id, params)`
 
 Returns a memoized zero-arg callback. Useful for `onClick` handlers with fixed params -- avoids creating a new function on every render.
 
 ```tsx
-const addDefault = useInvoke('todo/create', { text: 'Default task' });
+const addDefault = useBoundEvent('todo/create', { text: 'Default task' });
 // ...
 <button onClick={addDefault}>Add default</button>
 ```
@@ -239,7 +239,7 @@ With `suspensify`:
 
 ```tsx
 const TodoList = suspensify(function TodoList() {
-  const todos = useValue('todo/items', { sortBy });
+  const todos = useSub('todo/items', { sortBy });
   // ...
 });
 

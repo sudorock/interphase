@@ -143,5 +143,5 @@ const store = createStore<State, Subs, Events>({
 });
 
 export const StoreProvider = store.StoreProvider;
-export const useDispatch = store.useDispatch;
-export const useValue = store.useValue;
+export const useEvent = store.useEvent;
+export const useSub = store.useSub;

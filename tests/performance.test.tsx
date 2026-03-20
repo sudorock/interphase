@@ -6,25 +6,25 @@ import { createTestStore, createWrapper } from './helpers';
 
 describe('selective re-rendering', () => {
   it('does not re-render when unsubscribed state changes', () => {
-    const { useValue, useDispatch, StoreProvider } = createTestStore();
+    const { useSub, useEvent, StoreProvider } = createTestStore();
 
     function CountDisplay() {
       const renderCount = useRef(0);
       renderCount.current++;
-      const count = useValue('count');
+      const count = useSub('count');
       return <div data-testid="count" data-renders={renderCount.current}>{count}</div>;
     }
 
     function LabelDisplay() {
       const renderCount = useRef(0);
       renderCount.current++;
-      const label = useValue('labelUpper');
+      const label = useSub('labelUpper');
       return <div data-testid="label" data-renders={renderCount.current}>{label}</div>;
     }
 
     function Controls() {
-      const setCount = useDispatch('setCount');
-      const setLabel = useDispatch('setLabel');
+      const setCount = useEvent('setCount');
+      const setLabel = useEvent('setLabel');
       return (
         <>
           <button onClick={() => setCount({ value: 5 })}>set-count</button>
@@ -64,13 +64,13 @@ describe('selective re-rendering', () => {
 // --- Hook reference stability ---
 
 describe('hook reference stability', () => {
-  it('useDispatch returns stable reference across re-renders', () => {
-    const { useDispatch, StoreProvider } = createTestStore();
+  it('useEvent returns stable reference across re-renders', () => {
+    const { useEvent, StoreProvider } = createTestStore();
     const refs: Function[] = [];
 
     function Track() {
       const [, setTick] = useState(0);
-      const dispatch = useDispatch('setCount');
+      const dispatch = useEvent('setCount');
       refs.push(dispatch);
       return <button onClick={() => setTick((t) => t + 1)}>rerender</button>;
     }
@@ -85,13 +85,13 @@ describe('hook reference stability', () => {
     expect(refs[1]).toBe(refs[2]);
   });
 
-  it('useInvoke returns stable reference for structurally equal params', () => {
-    const { useInvoke, StoreProvider } = createTestStore();
+  it('useBoundEvent returns stable reference for structurally equal params', () => {
+    const { useBoundEvent, StoreProvider } = createTestStore();
     const refs: Function[] = [];
 
     function Track() {
       const [, setTick] = useState(0);
-      const invoke = useInvoke('setCount', { value: 1 });
+      const invoke = useBoundEvent('setCount', { value: 1 });
       refs.push(invoke);
       return <button onClick={() => setTick((t) => t + 1)}>rerender</button>;
     }
@@ -106,8 +106,8 @@ describe('hook reference stability', () => {
     expect(refs[1]).toBe(refs[2]);
   });
 
-  it('useInvoke is stable with different key order', () => {
-    const { useInvoke, StoreProvider } = createTestStore();
+  it('useBoundEvent is stable with different key order', () => {
+    const { useBoundEvent, StoreProvider } = createTestStore();
     const refs: Function[] = [];
 
     function Track() {
@@ -115,7 +115,7 @@ describe('hook reference stability', () => {
       const params = tick % 2 === 0
         ? { count: 1, label: 'x' }
         : { label: 'x', count: 1 };
-      const invoke = useInvoke('setBoth', params);
+      const invoke = useBoundEvent('setBoth', params);
       refs.push(invoke);
       return <button onClick={() => setTick((t) => t + 1)}>rerender</button>;
     }
@@ -128,13 +128,13 @@ describe('hook reference stability', () => {
     expect(refs[0]).toBe(refs[1]);
   });
 
-  it('useInvoke returns new reference when params change', () => {
-    const { useInvoke, StoreProvider } = createTestStore();
+  it('useBoundEvent returns new reference when params change', () => {
+    const { useBoundEvent, StoreProvider } = createTestStore();
     const refs: Function[] = [];
 
     function Track() {
       const [tick, setTick] = useState(1);
-      const invoke = useInvoke('setCount', { value: tick });
+      const invoke = useBoundEvent('setCount', { value: tick });
       refs.push(invoke);
       return <button onClick={() => setTick((t) => t + 1)}>rerender</button>;
     }
@@ -152,17 +152,17 @@ describe('hook reference stability', () => {
 
 describe('useShallow selector stability', () => {
   it('sync sub returning object does not re-render when result is structurally equal', () => {
-    const { useValue, useDispatch, StoreProvider } = createTestStore();
+    const { useSub, useEvent, StoreProvider } = createTestStore();
 
     function StatsDisplay() {
       const renderCount = useRef(0);
       renderCount.current++;
-      const stats = useValue('stats');
+      const stats = useSub('stats');
       return <div data-testid="stats" data-renders={renderCount.current}>{stats.count},{stats.label}</div>;
     }
 
     function Controls() {
-      const toggleFlag = useDispatch('toggleFlag');
+      const toggleFlag = useEvent('toggleFlag');
       return <button onClick={() => toggleFlag(undefined as any)}>toggle-flag</button>;
     }
 
