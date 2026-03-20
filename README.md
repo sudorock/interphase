@@ -4,9 +4,9 @@ Reactive state for React where sync and async feel the same.
 
 ## Motive
 
-State in UI apps splits into two worlds: local (immediate) and remote/async (loading, error, pending). This split leaks into component code -- different hooks, different patterns, conditional rendering for loading states.
+State in UI apps splits into two worlds: local (immediate) and remote/async (loading, error, pending). This split leaks into component code as different hooks, different patterns, and conditional rendering for loading states.
 
-interphase unifies both behind a single `useSub` hook. Components read state the same way regardless of source. Sync subscriptions resolve from Zustand state, async subscriptions resolve through TanStack Query with Suspense -- but the call site is identical.
+interphase unifies both behind a single `useSub` hook. Components read state the same way regardless of source. Sync subscriptions resolve from Zustand state, async subscriptions resolve through TanStack Query with Suspense. The call site is identical either way.
 
 `suspensify` bridges async subscriptions to React Suspense, giving a natural fallback UI without manual loading checks.
 
@@ -49,7 +49,7 @@ const { sub, asyncSub, evt } = registry;
 
 sub('todo/sort-by', ({ state }) => state.sortBy);
 
-// Async subscription -- same useSub call site, backed by TanStack Query + Suspense
+// Async subscription: same useSub call site, backed by TanStack Query + Suspense
 asyncSub('todo/items', async ({ params }) => {
   const res = await fetch(`/api/todos?sort=${params.sortBy}`);
   return res.json();
@@ -88,7 +88,7 @@ export const { StoreProvider, useSub, useEvent } = store;
 ```tsx
 const TodoList = suspensify(function TodoList() {
   const sortBy = useSub('todo/sort-by');             // sync
-  const todos = useSub('todo/items', { sortBy });  // async -- suspends until resolved
+  const todos = useSub('todo/items', { sortBy });  // async, suspends until resolved
   const create = useEvent('todo/create');
   const toggle = useEvent('todo/toggle');
   const setSort = useEvent('todo.sort/set');
@@ -155,7 +155,7 @@ asyncSub('todo/items', async ({ params }) => {
 
 Registers an event handler. The handler receives `{ setState, getState, read, params, dispatch, invalidateAsyncSub, invalidateAsyncSubs, replaceAsyncSub, replaceAsyncSubs }`.
 
-`setState` uses immer -- mutate the draft directly.
+`setState` uses immer. Mutate the draft directly.
 
 ```ts
 evt('todo.sort/set', ({ params, setState }) => {
@@ -217,7 +217,7 @@ const create = useEvent('todo/create');
 
 ### `useBoundEvent(id, params)`
 
-Returns a memoized zero-arg callback. Useful for `onClick` handlers with fixed params -- avoids creating a new function on every render.
+Returns a memoized zero-arg callback. Useful for `onClick` handlers with fixed params. Avoids creating a new function on every render.
 
 ```tsx
 const addDefault = useBoundEvent('todo/create', { text: 'Default task' });
