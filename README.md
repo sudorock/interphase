@@ -1,96 +1,284 @@
 # interphase
 
-Reusable state-management runtime extracted from the Elements store.
+Reactive state for React where sync and async feel the same.
 
-It keeps the original runtime model:
+## Motive
 
-- Zustand for local state
-- TanStack Query v5 for async subscriptions
-- typed subscriptions and events
+State in UI apps splits into two worlds: local (immediate) and remote/async (loading, error, pending). This split leaks into component code -- different hooks, different patterns, conditional rendering for loading states.
 
-It does not include app policy:
+interphase unifies both behind a single `useValue` hook. Components read state the same way regardless of source. Sync subscriptions resolve from Zustand state, async subscriptions resolve through TanStack Query with Suspense -- but the call site is identical.
 
-- no aggregated `Subs`/`Events`
-- no slice inventory
-- no transport helpers like `remoteSub`
-- no app-specific hooks
+`suspensify` bridges async subscriptions to React Suspense, giving a natural fallback UI without manual loading checks.
 
 ## Install
 
 ```bash
-npm install react @tanstack/react-query zustand immer
+npm install interphase
 ```
 
-## Example
+Peer dependencies: `react`, `zustand`, `@tanstack/react-query`.
+Direct dependency (bundled): `immer`.
 
-```tsx
-import { createRegistry, createStore, Evt, Sub } from 'interphase';
+## Quick start
+
+```ts
+import { createRegistry, createStore, suspensify, type Evt, type Sub } from 'interphase';
+
+type Todo = { id: string; text: string; done: boolean };
+type SortBy = 'newest' | 'oldest' | 'alphabetical';
+
+type State = {
+  sortBy: SortBy;
+};
 
 type Subs = {
-  'counter/value': Sub<undefined, number>;
-  'profile/name': Sub<{ userId: string }, string>;
+  'todo.sort/value': Sub<{}, SortBy>;
+  'todo.list/items': Sub<{ sortBy: SortBy }, Todo[]>;
 };
 
 type Events = {
-  'counter/increment': Evt<{ amount: number }>;
+  'todo/create': Evt<{ text: string }>;
+  'todo/toggle': Evt<{ id: string }>;
+  'todo.sort/set': Evt<{ value: SortBy }>;
 };
 
-const registry = createRegistry<Subs, Events>();
+const registry = createRegistry<State, Subs, Events>();
 const { sub, asyncSub, evt } = registry;
 
-const remoteSub = <T extends keyof Subs>(id: T) => {
-  asyncSub(id, async ({ params }) => {
-    const response = await fetch(`/api/sub/${String(id)}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(params),
-    });
+sub('todo.sort/value', ({ state }) => state.sortBy);
 
-    return response.json();
+// Async subscription -- same useValue call site, backed by TanStack Query + Suspense
+asyncSub('todo.list/items', async ({ params }) => {
+  const res = await fetch(`/api/todos?sort=${params.sortBy}`);
+  return res.json();
+});
+
+evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
+  const sortBy = read('todo.sort/value');
+  await fetch('/api/todos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: params.text }),
   });
-};
+  await invalidateAsyncSub(['todo.list/items', { sortBy }]);
+});
 
-sub('counter/value', ({ state }) => state.counter.value);
-remoteSub('profile/name');
+evt('todo/toggle', async ({ params, invalidateAsyncSub, read }) => {
+  const sortBy = read('todo.sort/value');
+  await fetch(`/api/todos/${params.id}/toggle`, { method: 'POST' });
+  await invalidateAsyncSub(['todo.list/items', { sortBy }]);
+});
 
-evt('counter/increment', ({ setState, params }) => {
-  setState((state: any) => {
-    state.counter.value += params.amount;
+evt('todo.sort/set', ({ params, setState }) => {
+  setState((state) => {
+    state.sortBy = params.value;
   });
 });
 
-const store = createStore({
+const store = createStore<State, Subs, Events>({
+  registry,
+  slices: [() => ({ sortBy: 'newest' })],
+});
+
+export const { StoreProvider, useValue, useDispatch } = store;
+```
+
+```tsx
+const TodoList = suspensify(function TodoList() {
+  const sortBy = useValue('todo.sort/value');             // sync
+  const todos = useValue('todo.list/items', { sortBy });  // async -- suspends until resolved
+  const create = useDispatch('todo/create');
+  const toggle = useDispatch('todo/toggle');
+  const setSort = useDispatch('todo.sort/set');
+
+  return (
+    <div>
+      <select value={sortBy} onChange={(e) => setSort({ value: e.target.value as SortBy })}>
+        <option value="newest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="alphabetical">A-Z</option>
+      </select>
+      <button onClick={() => create({ text: 'New task' })}>Add</button>
+      <ul>
+        {todos.map((t) => (
+          <li key={t.id} onClick={() => toggle({ id: t.id })}>
+            {t.done ? '[x]' : '[ ]'} {t.text}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+});
+
+function App() {
+  return (
+    <StoreProvider>
+      <TodoList fallback={<p>Loading todos...</p>} />
+    </StoreProvider>
+  );
+}
+```
+
+## API reference
+
+### `createRegistry<State, Subs, Events>()`
+
+Creates a registry that collects subscription and event definitions. Returns `{ sub, asyncSub, evt }` along with internal maps consumed by `createStore`.
+
+```ts
+const registry = createRegistry<State, Subs, Events>();
+const { sub, asyncSub, evt } = registry;
+```
+
+### `sub(id, resolver)`
+
+Registers a sync subscription. The resolver receives `{ state, params }` and returns the derived value.
+
+```ts
+sub('todo.sort/value', ({ state }) => state.sortBy);
+```
+
+### `asyncSub(id, resolver)`
+
+Registers an async subscription. The resolver returns a `Promise`. Async subscriptions are backed by TanStack Query and integrate with React Suspense.
+
+```ts
+asyncSub('todo.list/items', async ({ params }) => {
+  const res = await fetch(`/api/todos?sort=${params.sortBy}`);
+  return res.json();
+});
+```
+
+### `evt(id, handler)`
+
+Registers an event handler. The handler receives `{ setState, getState, read, params, dispatch, invalidateAsyncSub, invalidateAsyncSubs, replaceAsyncSub, replaceAsyncSubs }`.
+
+`setState` uses immer -- mutate the draft directly.
+
+```ts
+evt('todo.sort/set', ({ params, setState }) => {
+  setState((state) => {
+    state.sortBy = params.value;
+  });
+});
+```
+
+Event handlers can invalidate async subscriptions to trigger a refetch:
+
+```ts
+evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
+  const sortBy = read('todo.sort/value');
+  await fetch('/api/todos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: params.text }),
+  });
+  await invalidateAsyncSub(['todo.list/items', { sortBy }]);
+});
+```
+
+### `createStore({ registry, slices })`
+
+Creates the store from a registry and initial state slices. Returns `{ StoreProvider, useValue, useDispatch, useInvoke }`.
+
+Each slice is a function returning a partial state object. Slices are merged to form the initial state.
+
+```ts
+const store = createStore<State, Subs, Events>({
   registry,
   slices: [
-    () => ({
-      counter: { value: 0 },
-    }),
+    () => ({ todos: [] }),
   ],
 });
 
-export const StoreProvider = store.StoreProvider;
-export const useValue = store.useValue;
-export const useDispatch = store.useDispatch;
+export const { StoreProvider, useValue, useDispatch, useInvoke } = store;
 ```
 
-Components consume the app-local exports:
+### `useValue(id, params?)`
+
+Single hook for reading both sync and async subscriptions. The call site is identical regardless of backing.
 
 ```tsx
-function Counter() {
-  const count = useValue('counter/value');
-  const increment = useDispatch('counter/increment');
+const sortBy = useValue('todo.sort/value');             // sync
+const todos = useValue('todo.list/items', { sortBy });  // async (suspends)
+```
 
-  return <button onClick={() => increment({ amount: 1 })}>{count}</button>;
-}
+### `useDispatch(id)`
+
+Returns a stable dispatcher function for the given event.
+
+```tsx
+const create = useDispatch('todo/create');
+// ...
+<button onClick={() => create({ text: 'New task' })}>Add</button>
+```
+
+### `useInvoke(id, params)`
+
+Returns a memoized zero-arg callback. Useful for `onClick` handlers with fixed params -- avoids creating a new function on every render.
+
+```tsx
+const addDefault = useInvoke('todo/create', { text: 'Default task' });
+// ...
+<button onClick={addDefault}>Add default</button>
+```
+
+### `suspensify(Component)`
+
+HOC that wraps a component in `<Suspense>`. Accepts an optional `fallback` prop.
+
+Without `suspensify`:
+
+```tsx
+<Suspense fallback={<p>Loading...</p>}>
+  <TodoList />
+</Suspense>
+```
+
+With `suspensify`:
+
+```tsx
+const TodoList = suspensify(function TodoList() {
+  const todos = useValue('todo.list/items', { sortBy });
+  // ...
+});
+
+<TodoList fallback={<p>Loading...</p>} />
+```
+
+## `remoteSub` pattern
+
+`asyncSub` can be wrapped into a `remoteSub` helper that wires a subscription to an HTTP endpoint:
+
+```ts
+const remoteSub = <T extends keyof Subs>(id: T) => {
+  asyncSub(id, async ({ params }) => {
+    const res = await fetch(`/api/${String(id)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    return res.json();
+  });
+};
+```
+
+One line to connect a subscription to an API:
+
+```ts
+remoteSub('todo.list/items');
 ```
 
 ## Examples
 
-- `examples/todos` is a small Vite app that consumes `interphase` as a local package.
-- The example scripts build the library before starting or bundling the app.
+`examples/todos` is a small Vite app that consumes `interphase` as a local package.
 
 ```bash
 cd examples/todos
 npm install
 npm run dev
 ```
+
+## License
+
+MIT
