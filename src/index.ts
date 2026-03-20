@@ -1,8 +1,8 @@
 export { createRegistry } from './registry';
 export { createStore } from './store';
-export { SuspensePlaceholder, suspensify } from './suspensify';
+export { suspensify } from './suspensify';
 export type { Registry } from './registry';
-export type { SuspensePlaceholderProps, SuspensifyProps } from './suspensify';
+export type { SuspensifyProps } from './suspensify';
 export type {
   Dispatch,
   DispatchHook,
