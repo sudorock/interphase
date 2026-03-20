@@ -1,4 +1,4 @@
-import { createRegistry, createStore, type Evt, type Sub } from 'interphase';
+import { createRegistry, createStore, type Evt, type Sub } from '@aktopia/interphase';
 
 type Filter = 'all' | 'active' | 'done';
 
