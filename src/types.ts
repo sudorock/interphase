@@ -52,22 +52,23 @@ export type ReplaceAsyncSubs<Subs extends StoreSubs> = <T extends keyof Subs>(
   ][]
 ) => void;
 
-export type SubscriptionArgs<Subs extends StoreSubs, T extends keyof Subs> = {
-  state: any;
+export type SubscriptionArgs<State, Subs extends StoreSubs, T extends keyof Subs> = {
+  state: State;
   params: Subs[T]['params'];
 };
 
-export type SubscriptionResolver<Subs extends StoreSubs, T extends keyof Subs> = (
-  args: SubscriptionArgs<Subs, T>
+export type SubscriptionResolver<State, Subs extends StoreSubs, T extends keyof Subs> = (
+  args: SubscriptionArgs<State, Subs, T>
 ) => Subs[T]['result'] | Promise<Subs[T]['result']>;
 
 export type EventHandlerArgs<
+  State,
   Subs extends StoreSubs,
   Events extends StoreEvents,
   T extends keyof Events,
 > = {
-  setState: StoreApi<any>['setState'];
-  getState: StoreApi<any>['getState'];
+  setState: StoreApi<State>['setState'];
+  getState: StoreApi<State>['getState'];
   read: Read<Subs>;
   params: Events[T]['params'];
   dispatch: Dispatch<Events>;
@@ -78,7 +79,8 @@ export type EventHandlerArgs<
 };
 
 export type EventHandler<
+  State,
   Subs extends StoreSubs,
   Events extends StoreEvents,
   T extends keyof Events,
-> = (args: EventHandlerArgs<Subs, Events, T>) => void | Promise<void>;
+> = (args: EventHandlerArgs<State, Subs, Events, T>) => void | Promise<void>;

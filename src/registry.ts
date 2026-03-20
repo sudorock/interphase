@@ -14,20 +14,21 @@ export type RegisteredEvent = {
   fn: (args: any) => void | Promise<void>;
 };
 
-export type Registry<Subs extends StoreSubs, Events extends StoreEvents> = {
+export type Registry<State, Subs extends StoreSubs, Events extends StoreEvents> = {
   subscriptions: Partial<Record<keyof Subs, RegisteredSubscription>>;
   events: Partial<Record<keyof Events, RegisteredEvent>>;
-  sub: <T extends keyof Subs>(id: T, fn: SubscriptionResolver<Subs, T>) => void;
-  asyncSub: <T extends keyof Subs>(id: T, fn: SubscriptionResolver<Subs, T>) => void;
-  evt: <T extends keyof Events>(id: T, fn: EventHandler<Subs, Events, T>) => void;
+  sub: <T extends keyof Subs>(id: T, fn: SubscriptionResolver<State, Subs, T>) => void;
+  asyncSub: <T extends keyof Subs>(id: T, fn: SubscriptionResolver<State, Subs, T>) => void;
+  evt: <T extends keyof Events>(id: T, fn: EventHandler<State, Subs, Events, T>) => void;
 };
 
 export function createRegistry<
+  State,
   Subs extends StoreSubs,
   Events extends StoreEvents,
->(): Registry<Subs, Events> {
-  const subscriptions: Registry<Subs, Events>['subscriptions'] = {};
-  const events: Registry<Subs, Events>['events'] = {};
+>(): Registry<State, Subs, Events> {
+  const subscriptions: Registry<State, Subs, Events>['subscriptions'] = {};
+  const events: Registry<State, Subs, Events>['events'] = {};
 
   return {
     subscriptions,

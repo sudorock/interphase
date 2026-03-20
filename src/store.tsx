@@ -48,7 +48,7 @@ export type CreateStoreArgs<
   Events extends StoreEvents,
 > = {
   slices: Array<Slice<State>>;
-  registry: Registry<Subs, Events>;
+  registry: Registry<State, Subs, Events>;
 };
 
 export type StoreBundle<
