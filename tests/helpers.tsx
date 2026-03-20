@@ -9,6 +9,7 @@ type Subs = {
   doubled: Sub<void, number>;
   countByFactor: Sub<{ factor: number }, number>;
   labelUpper: Sub<void, string>;
+  stats: Sub<void, { count: number; label: string }>;
   asyncCount: Sub<void, number>;
 };
 
@@ -16,33 +17,37 @@ type Events = {
   increment: Evt<void>;
   setCount: Evt<{ value: number }>;
   setLabel: Evt<{ value: string }>;
+  setBoth: Evt<{ count: number; label: string }>;
 };
 
 export type { State, Subs, Events };
 
 export function createTestStore() {
-  const registry = createRegistry<Subs, Events>();
+  const registry = createRegistry<State, Subs, Events>();
 
-  registry.sub('count', ({ state }: { state: State }) => state.count);
-  registry.sub('doubled', ({ state }: { state: State }) => state.count * 2);
-  registry.sub('countByFactor', ({ state, params }: { state: State; params: { factor: number } }) => state.count * params.factor);
-  registry.sub('labelUpper', ({ state }: { state: State }) => state.label.toUpperCase());
-  registry.asyncSub('asyncCount', async ({ state }: { state: State }) => state.count);
+  registry.sub('count', ({ state }) => state.count);
+  registry.sub('doubled', ({ state }) => state.count * 2);
+  registry.sub('countByFactor', ({ state, params }) => state.count * params.factor);
+  registry.sub('labelUpper', ({ state }) => state.label.toUpperCase());
+  registry.asyncSub('asyncCount', async ({ state }) => state.count);
 
   registry.evt('increment', ({ setState }) => {
-    setState((draft: State) => { draft.count++; });
+    setState(((draft: State) => {
+      draft.count++;
+    }) as any);
   });
   registry.evt('setCount', ({ setState, params }) => {
-    setState((draft: State) => { draft.count = params.value; });
+    setState(((draft: State) => {
+      draft.count = params.value;
+    }) as any);
   });
   registry.evt('setLabel', ({ setState, params }) => {
-    setState((draft: State) => { draft.label = params.value; });
+    setState(((draft: State) => {
+      draft.label = params.value;
+    }) as any);
   });
 
-  const slices: Slice<State>[] = [
-    () => ({ count: 0 }),
-    () => ({ label: 'hello' }),
-  ];
+  const slices: Slice<State>[] = [() => ({ count: 0 }), () => ({ label: 'hello' })];
 
   return createStore<State, Subs, Events>({ slices, registry });
 }
@@ -50,9 +55,7 @@ export function createTestStore() {
 export function createWrapper(StoreProvider: ({ children }: { children: ReactNode }) => ReactNode) {
   return ({ children }: { children: ReactNode }) => (
     <StoreProvider>
-      <Suspense fallback={<div>loading</div>}>
-        {children}
-      </Suspense>
+      <Suspense fallback={<div>loading</div>}>{children}</Suspense>
     </StoreProvider>
   );
 }

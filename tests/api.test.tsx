@@ -1,28 +1,28 @@
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import { Suspense, type ReactNode } from 'react';
-import { createRegistry, createStore, suspensify } from '../src/index';
-import type { Sub, Evt, Slice } from '../src/index';
+import { Suspense } from 'react';
+import { createRegistry, createStore, suspensify } from '../src';
+import type { Sub, Evt } from '../src';
 import { createTestStore, createWrapper, type State, type Subs, type Events } from './helpers';
 
 // --- createRegistry ---
 
 describe('createRegistry', () => {
   it('registers sync subscription', () => {
-    const registry = createRegistry<Subs, Events>();
-    registry.sub('count', ({ state }: { state: State }) => state.count);
+    const registry = createRegistry<State, Subs, Events>();
+    registry.sub('count', ({ state }) => state.count);
     expect(registry.subscriptions['count']).toMatchObject({ async: false });
   });
 
   it('registers async subscription', () => {
-    const registry = createRegistry<Subs, Events>();
-    registry.asyncSub('asyncCount', async ({ state }: { state: State }) => state.count);
+    const registry = createRegistry<State, Subs, Events>();
+    registry.asyncSub('asyncCount', async ({ state }) => state.count);
     expect(registry.subscriptions['asyncCount']).toMatchObject({ async: true });
   });
 
   it('registers event handler', () => {
-    const registry = createRegistry<Subs, Events>();
+    const registry = createRegistry<State, Subs, Events>();
     registry.evt('increment', ({ setState }) => {
-      setState((draft: State) => { draft.count++; });
+      setState(((draft: State) => { draft.count++; }) as any);
     });
     expect(registry.events['increment']).toBeDefined();
   });
@@ -109,8 +109,8 @@ describe('useValue (async)', () => {
     type AEvents = Record<string, never>;
     type AState = {};
 
-    const registry = createRegistry<ASubs, AEvents>();
-    registry.asyncSub('data', async ({ params }: { params: { id: number } }) => {
+    const registry = createRegistry<AState, ASubs, AEvents>();
+    registry.asyncSub('data', async ({ params }) => {
       return `item-${params.id}`;
     });
 
@@ -185,12 +185,12 @@ describe('useDispatch', () => {
     type REvents = { setCountFromDoubled: Evt<void> };
     type RState = { count: number };
 
-    const registry = createRegistry<RSubs, REvents>();
-    registry.sub('count', ({ state }: { state: RState }) => state.count);
-    registry.sub('doubled', ({ state }: { state: RState }) => state.count * 2);
+    const registry = createRegistry<RState, RSubs, REvents>();
+    registry.sub('count', ({ state }) => state.count);
+    registry.sub('doubled', ({ state }) => state.count * 2);
     registry.evt('setCountFromDoubled', ({ read, setState }) => {
       const doubled = read('doubled');
-      setState((draft: RState) => { draft.count = doubled; });
+      setState(((draft: RState) => { draft.count = doubled; }) as any);
     });
 
     const { useValue, useDispatch, StoreProvider } = createStore<RState, RSubs, REvents>({
@@ -225,10 +225,10 @@ describe('useDispatch', () => {
     type DEvents = { increment: Evt<void>; doubleIncrement: Evt<void> };
     type DState = { count: number };
 
-    const registry = createRegistry<DSubs, DEvents>();
-    registry.sub('count', ({ state }: { state: DState }) => state.count);
+    const registry = createRegistry<DState, DSubs, DEvents>();
+    registry.sub('count', ({ state }) => state.count);
     registry.evt('increment', ({ setState }) => {
-      setState((draft: DState) => { draft.count++; });
+      setState(((draft: DState) => { draft.count++; }) as any);
     });
     registry.evt('doubleIncrement', ({ dispatch }) => {
       dispatch('increment');
@@ -267,7 +267,7 @@ describe('useDispatch', () => {
     type IState = {};
 
     let callCount = 0;
-    const registry = createRegistry<ISubs, IEvents>();
+    const registry = createRegistry<IState, ISubs, IEvents>();
     registry.asyncSub('data', async () => {
       callCount++;
       return `call-${callCount}`;
@@ -313,7 +313,7 @@ describe('useDispatch', () => {
     type REvents = { replace: Evt<{ value: string }> };
     type RState = {};
 
-    const registry = createRegistry<RSubs, REvents>();
+    const registry = createRegistry<RState, RSubs, REvents>();
     registry.asyncSub('data', async () => 'original');
     registry.evt('replace', ({ replaceAsyncSub, params }) => {
       replaceAsyncSub(['data', undefined], params.value);
@@ -417,7 +417,7 @@ describe('suspensify', () => {
     type SEvents = Record<string, never>;
     type SState = {};
 
-    const registry = createRegistry<SSubs, SEvents>();
+    const registry = createRegistry<SState, SSubs, SEvents>();
     registry.asyncSub('data', async () => 'resolved-value');
 
     const { useValue, StoreProvider } = createStore<SState, SSubs, SEvents>({

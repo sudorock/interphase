@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { Suspense, useRef, useState } from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { useRef, useState } from 'react';
 import { createTestStore, createWrapper } from './helpers';
 
 // --- Selective re-rendering ---
@@ -90,8 +90,7 @@ describe('hook reference stability', () => {
     const refs: Function[] = [];
 
     function Track() {
-      const [tick, setTick] = useState(0);
-      // New object identity each render, but structurally equal
+      const [, setTick] = useState(0);
       const invoke = useInvoke('setCount', { value: 1 });
       refs.push(invoke);
       return <button onClick={() => setTick((t) => t + 1)}>rerender</button>;
@@ -113,9 +112,10 @@ describe('hook reference stability', () => {
 
     function Track() {
       const [tick, setTick] = useState(0);
-      // Alternate key order each render
-      const params = tick % 2 === 0 ? { value: 1 } : { value: 1 };
-      const invoke = useInvoke('setCount', params);
+      const params = tick % 2 === 0
+        ? { count: 1, label: 'x' }
+        : { label: 'x', count: 1 };
+      const invoke = useInvoke('setBoth', params);
       refs.push(invoke);
       return <button onClick={() => setTick((t) => t + 1)}>rerender</button>;
     }
@@ -154,30 +154,31 @@ describe('useShallow selector stability', () => {
   it('sync sub returning object does not re-render when result is structurally equal', () => {
     const { useValue, useDispatch, StoreProvider } = createTestStore();
 
-    function Display() {
+    function StatsDisplay() {
       const renderCount = useRef(0);
       renderCount.current++;
-      const count = useValue('count');
-      return <div data-testid="count" data-renders={renderCount.current}>{count}</div>;
+      const stats = useValue('stats');
+      return <div data-testid="stats" data-renders={renderCount.current}>{stats.count},{stats.label}</div>;
     }
 
     function Controls() {
-      const setLabel = useDispatch('setLabel');
-      return <button onClick={() => setLabel({ value: 'changed' })}>change-label</button>;
+      const setBoth = useDispatch('setBoth');
+      return <button onClick={() => setBoth({ count: 0, label: 'hello' })}>set-same</button>;
     }
 
     render(
       <>
-        <Display />
+        <StatsDisplay />
         <Controls />
       </>,
       { wrapper: createWrapper(StoreProvider) },
     );
 
-    const el = screen.getByTestId('count');
+    const el = screen.getByTestId('stats');
+    expect(el.textContent).toBe('0,hello');
     const rendersBefore = Number(el.getAttribute('data-renders'));
 
-    fireEvent.click(screen.getByText('change-label'));
+    fireEvent.click(screen.getByText('set-same'));
 
     const rendersAfter = Number(el.getAttribute('data-renders'));
     expect(rendersAfter).toBe(rendersBefore);
