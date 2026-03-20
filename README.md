@@ -1,14 +1,14 @@
 # interphase
 
-Reactive state for React where sync and async feel the same.
+Reactive state for React. Sync and async through one interface.
 
 ## Motive
 
-State in UI apps splits into two worlds: local (immediate) and remote/async (loading, error, pending). This split leaks into component code as different hooks, different patterns, and conditional rendering for loading states.
+State in UI apps fractures into two worlds: local state is immediate, remote state drags in loading flags, error branches, and conditional rendering. Components end up shaped by *how* data arrives rather than *what* they display.
 
-interphase unifies both behind a single `useSub` hook. Components read state the same way regardless of source. Sync subscriptions resolve from Zustand state, async subscriptions resolve through TanStack Query with Suspense. The call site is identical either way.
+interphase collapses that distinction. One hook — `useSub` — reads any subscription. Sync subscriptions resolve from Zustand state. Async subscriptions resolve through TanStack Query with Suspense. Components don't know and don't care which is which.
 
-`suspensify` bridges async subscriptions to React Suspense, giving a natural fallback UI without manual loading checks.
+`suspensify` wires async subscriptions to React Suspense so fallback UI is declarative, not procedural.
 
 ## Install
 
@@ -49,7 +49,7 @@ const { sub, asyncSub, evt } = registry;
 
 sub('todo/sort-by', ({ state }) => state.sortBy);
 
-// Async subscription: same useSub call site, backed by TanStack Query + Suspense
+// Async subscription: backed by TanStack Query + Suspense
 asyncSub('todo/items', async ({ params }) => {
   const res = await fetch(`/api/todos?sort=${params.sortBy}`);
   return res.json();
@@ -125,7 +125,7 @@ function App() {
 
 ### `createRegistry<State, Subs, Events>()`
 
-Creates a registry that collects subscription and event definitions. Returns `{ sub, asyncSub, evt }` along with internal maps consumed by `createStore`.
+Creates a registry that collects subscription and event definitions. Returns `{ sub, asyncSub, evt }` and internal maps consumed by `createStore`.
 
 ```ts
 const registry = createRegistry<State, Subs, Events>();
@@ -198,7 +198,7 @@ export const { StoreProvider, useSub, useEvent, useBoundEvent } = store;
 
 ### `useSub(id, params?)`
 
-Single hook for reading both sync and async subscriptions. The call site is identical regardless of backing.
+One hook for all subscriptions — sync or async.
 
 ```tsx
 const sortBy = useSub('todo/sort-by');             // sync
@@ -217,7 +217,7 @@ const create = useEvent('todo/create');
 
 ### `useBoundEvent(id, params)`
 
-Returns a memoized zero-arg callback. Useful for `onClick` handlers with fixed params. Avoids creating a new function on every render.
+Returns a memoized zero-arg callback. Useful for handlers with fixed params — no allocation on re-render.
 
 ```tsx
 const addDefault = useBoundEvent('todo/create', { text: 'Default task' });
@@ -250,7 +250,7 @@ const TodoList = suspensify(function TodoList() {
 
 ## `remoteSub` pattern
 
-`asyncSub` can be wrapped into a `remoteSub` helper that wires a subscription to an HTTP endpoint:
+Thin wrapper over `asyncSub` that wires a subscription directly to an HTTP endpoint:
 
 ```ts
 const remoteSub = <T extends keyof Subs>(id: T) => {
@@ -265,7 +265,7 @@ const remoteSub = <T extends keyof Subs>(id: T) => {
 };
 ```
 
-One line to connect a subscription to an API:
+One line per subscription:
 
 ```ts
 remoteSub('todo/items');
@@ -273,7 +273,7 @@ remoteSub('todo/items');
 
 ## Examples
 
-`examples/todos` is a small Vite app that consumes `@aktopia/interphase` as a local package.
+`examples/todos` — a Vite app that demonstrates the full API.
 
 ```bash
 cd examples/todos
