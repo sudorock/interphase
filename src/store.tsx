@@ -10,6 +10,20 @@ import { immer } from 'zustand/middleware/immer';
 import { useShallow } from 'zustand/react/shallow';
 import { createStore as createStateStore } from 'zustand/vanilla';
 import type { Registry } from './registry';
+import type {
+  Dispatch,
+  DispatchHook,
+  InvalidateAsyncSub,
+  InvalidateAsyncSubs,
+  InvokeHook,
+  Read,
+  ReplaceAsyncSub,
+  ReplaceAsyncSubs,
+  Slice,
+  StoreEvents,
+  StoreSubs,
+  ValueHook,
+} from './types';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (Object.prototype.toString.call(value) !== '[object Object]') return false;
@@ -27,20 +41,6 @@ function hashKey(value: unknown): string {
       : val
   );
 }
-import type {
-  Dispatch,
-  DispatchHook,
-  InvalidateAsyncSub,
-  InvalidateAsyncSubs,
-  InvokeHook,
-  Read,
-  ReplaceAsyncSub,
-  ReplaceAsyncSubs,
-  Slice,
-  StoreEvents,
-  StoreSubs,
-  ValueHook,
-} from './types';
 
 export type CreateStoreArgs<
   State extends object,
