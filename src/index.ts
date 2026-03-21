@@ -8,7 +8,7 @@ export type { Registry } from './registry';
 export type { SuspensifyProps } from './suspensify';
 
 // Domain primitives
-export type { Sub, Evt, StoreSubs, StoreEvents, Slice } from './types';
+export type { Sub, Event, StoreSubs, StoreEvents, Slice } from './types';
 
 // Hooks
 export type { SubHook, EventHook, BoundEventHook } from './types';

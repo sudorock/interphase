@@ -1,4 +1,4 @@
-import { createRegistry, createStore, type Evt, type Sub } from '@aktopia/interphase';
+import { createRegistry, createStore, type Event, type Sub } from '@aktopia/interphase';
 
 type Filter = 'all' | 'active' | 'done';
 
@@ -23,12 +23,12 @@ type Subs = {
 };
 
 type Events = {
-  'todo.draft/set': Evt<{ value: string }>;
-  'todo/create': Evt<{}>;
-  'todo/toggle': Evt<{ id: string }>;
-  'todo/delete': Evt<{ id: string }>;
-  'todo.filter/set': Evt<{ value: Filter }>;
-  'todo.tip/refresh': Evt<{}>;
+  'todo.draft/set': Event<{ value: string }>;
+  'todo/create': Event<{}>;
+  'todo/toggle': Event<{ id: string }>;
+  'todo/delete': Event<{ id: string }>;
+  'todo.filter/set': Event<{ value: Filter }>;
+  'todo.tip/refresh': Event<{}>;
 };
 
 const tips = [
@@ -43,7 +43,7 @@ const nextTip = () => {
 };
 
 const registry = createRegistry<State, Subs, Events>();
-const { sub, asyncSub, evt } = registry;
+const { sub, asyncSub, event } = registry;
 
 sub('todo.list/items', ({ state }) => {
   if (state.filter === 'active') {
@@ -76,13 +76,13 @@ asyncSub('todo.tip/text', async () => {
   return nextTip();
 });
 
-evt('todo.draft/set', ({ params, setState }) => {
+event('todo.draft/set', ({ params, setState }) => {
   setState((state: State) => {
     state.draft = params.value;
   });
 });
 
-evt('todo/create', ({ read, setState }) => {
+event('todo/create', ({ read, setState }) => {
   const draft = read('todo.draft/value')?.trim();
 
   if (!draft) {
@@ -99,7 +99,7 @@ evt('todo/create', ({ read, setState }) => {
   });
 });
 
-evt('todo/toggle', ({ params, setState }) => {
+event('todo/toggle', ({ params, setState }) => {
   setState((state: State) => {
     const todo = state.todos.find((item) => item.id === params.id);
 
@@ -111,19 +111,19 @@ evt('todo/toggle', ({ params, setState }) => {
   });
 });
 
-evt('todo/delete', ({ params, setState }) => {
+event('todo/delete', ({ params, setState }) => {
   setState((state: State) => {
     state.todos = state.todos.filter((todo) => todo.id !== params.id);
   });
 });
 
-evt('todo.filter/set', ({ params, setState }) => {
+event('todo.filter/set', ({ params, setState }) => {
   setState((state: State) => {
     state.filter = params.value;
   });
 });
 
-evt('todo.tip/refresh', async ({ invalidateAsyncSub }) => {
+event('todo.tip/refresh', async ({ invalidateAsyncSub }) => {
   await invalidateAsyncSub(['todo.tip/text', undefined]);
 });
 

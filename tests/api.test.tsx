@@ -1,7 +1,7 @@
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { Suspense } from 'react';
 import { createRegistry, createStore, suspensify } from '../src';
-import type { Sub, Evt } from '../src';
+import type { Sub, Event } from '../src';
 import { createTestStore, createWrapper, type State, type Subs, type Events } from './helpers';
 
 // --- createRegistry ---
@@ -21,7 +21,7 @@ describe('createRegistry', () => {
 
   it('registers event handler', () => {
     const registry = createRegistry<State, Subs, Events>();
-    registry.evt('increment', ({ setState }) => {
+    registry.event('increment', ({ setState }) => {
       setState(((draft: State) => { draft.count++; }));
     });
     expect(registry.events['increment']).toBeDefined();
@@ -182,13 +182,13 @@ describe('useEvent', () => {
 
   it('event handler uses read() to access current sub value', () => {
     type RSubs = { count: Sub<void, number>; doubled: Sub<void, number> };
-    type REvents = { setCountFromDoubled: Evt<void> };
+    type REvents = { setCountFromDoubled: Event<void> };
     type RState = { count: number };
 
     const registry = createRegistry<RState, RSubs, REvents>();
     registry.sub('count', ({ state }) => state.count);
     registry.sub('doubled', ({ state }) => state.count * 2);
-    registry.evt('setCountFromDoubled', ({ read, setState }) => {
+    registry.event('setCountFromDoubled', ({ read, setState }) => {
       const doubled = read('doubled');
       setState(((draft: RState) => { draft.count = doubled; }));
     });
@@ -222,15 +222,15 @@ describe('useEvent', () => {
 
   it('event handler dispatches other events', () => {
     type DSubs = { count: Sub<void, number> };
-    type DEvents = { increment: Evt<void>; doubleIncrement: Evt<void> };
+    type DEvents = { increment: Event<void>; doubleIncrement: Event<void> };
     type DState = { count: number };
 
     const registry = createRegistry<DState, DSubs, DEvents>();
     registry.sub('count', ({ state }) => state.count);
-    registry.evt('increment', ({ setState }) => {
+    registry.event('increment', ({ setState }) => {
       setState(((draft: DState) => { draft.count++; }));
     });
-    registry.evt('doubleIncrement', ({ dispatch }) => {
+    registry.event('doubleIncrement', ({ dispatch }) => {
       dispatch('increment');
       dispatch('increment');
     });
@@ -263,7 +263,7 @@ describe('useEvent', () => {
 
   it('event handler invalidates async subscription', async () => {
     type ISubs = { data: Sub<void, string> };
-    type IEvents = { refresh: Evt<void> };
+    type IEvents = { refresh: Event<void> };
     type IState = {};
 
     let callCount = 0;
@@ -272,7 +272,7 @@ describe('useEvent', () => {
       callCount++;
       return `call-${callCount}`;
     });
-    registry.evt('refresh', async ({ invalidateAsyncSub }) => {
+    registry.event('refresh', async ({ invalidateAsyncSub }) => {
       await invalidateAsyncSub(['data', undefined]);
     });
 
@@ -310,12 +310,12 @@ describe('useEvent', () => {
 
   it('event handler replaces async subscription data', async () => {
     type RSubs = { data: Sub<void, string> };
-    type REvents = { replace: Evt<{ value: string }> };
+    type REvents = { replace: Event<{ value: string }> };
     type RState = {};
 
     const registry = createRegistry<RState, RSubs, REvents>();
     registry.asyncSub('data', async () => 'original');
-    registry.evt('replace', ({ replaceAsyncSub, params }) => {
+    registry.event('replace', ({ replaceAsyncSub, params }) => {
       replaceAsyncSub(['data', undefined], params.value);
     });
 

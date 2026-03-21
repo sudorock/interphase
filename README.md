@@ -24,7 +24,7 @@ Direct dependency (bundled): `immer`.
 ## Quick start
 
 ```ts
-import { createRegistry, createStore, suspensify, type Evt, type Sub } from '@aktopia/interphase';
+import { createRegistry, createStore, suspensify, type Event, type Sub } from '@aktopia/interphase';
 
 type Todo = { id: string; text: string; done: boolean };
 type SortBy = 'newest' | 'oldest' | 'alphabetical';
@@ -39,13 +39,13 @@ type Subs = {
 };
 
 type Events = {
-  'todo/create': Evt<{ text: string }>;
-  'todo/toggle': Evt<{ id: string }>;
-  'todo.sort-by/set': Evt<{ value: SortBy }>;
+  'todo/create': Event<{ text: string }>;
+  'todo/toggle': Event<{ id: string }>;
+  'todo.sort-by/set': Event<{ value: SortBy }>;
 };
 
 const registry = createRegistry<State, Subs, Events>();
-const { sub, asyncSub, evt } = registry;
+const { sub, asyncSub, event } = registry;
 
 sub('todo/sort-by', ({ state }) => state.sortBy);
 
@@ -55,7 +55,7 @@ asyncSub('todo/items', async ({ params }) => {
   return res.json();
 });
 
-evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
+event('todo/create', async ({ params, invalidateAsyncSub, read }) => {
   const sortBy = read('todo/sort-by');
   await fetch('/api/todos', {
     method: 'POST',
@@ -65,13 +65,13 @@ evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
   await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
 
-evt('todo/toggle', async ({ params, invalidateAsyncSub, read }) => {
+event('todo/toggle', async ({ params, invalidateAsyncSub, read }) => {
   const sortBy = read('todo/sort-by');
   await fetch(`/api/todos/${params.id}/toggle`, { method: 'POST' });
   await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
 
-evt('todo.sort-by/set', ({ params, setState }) => {
+event('todo.sort-by/set', ({ params, setState }) => {
   setState((state) => {
     state.sortBy = params.value;
   });
@@ -125,11 +125,11 @@ function App() {
 
 ### `createRegistry<State, Subs, Events>()`
 
-Creates a registry that collects subscription and event definitions. Returns `{ sub, asyncSub, evt }` and internal maps consumed by `createStore`.
+Creates a registry that collects subscription and event definitions. Returns `{ sub, asyncSub, event }` and internal maps consumed by `createStore`.
 
 ```ts
 const registry = createRegistry<State, Subs, Events>();
-const { sub, asyncSub, evt } = registry;
+const { sub, asyncSub, event } = registry;
 ```
 
 ### `sub(id, resolver)`
@@ -151,14 +151,14 @@ asyncSub('todo/items', async ({ params }) => {
 });
 ```
 
-### `evt(id, handler)`
+### `event(id, handler)`
 
 Registers an event handler. The handler receives `{ setState, getState, read, params, dispatch, invalidateAsyncSub, invalidateAsyncSubs, replaceAsyncSub, replaceAsyncSubs }`.
 
 `setState` uses immer. Mutate the draft directly.
 
 ```ts
-evt('todo.sort-by/set', ({ params, setState }) => {
+event('todo.sort-by/set', ({ params, setState }) => {
   setState((state) => {
     state.sortBy = params.value;
   });
@@ -168,7 +168,7 @@ evt('todo.sort-by/set', ({ params, setState }) => {
 Event handlers can invalidate async subscriptions to trigger a refetch:
 
 ```ts
-evt('todo/create', async ({ params, invalidateAsyncSub, read }) => {
+event('todo/create', async ({ params, invalidateAsyncSub, read }) => {
   const sortBy = read('todo/sort-by');
   await fetch('/api/todos', {
     method: 'POST',

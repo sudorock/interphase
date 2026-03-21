@@ -19,7 +19,7 @@ export type Registry<State, Subs extends StoreSubs, Events extends StoreEvents> 
   events: Partial<Record<keyof Events, RegisteredEvent>>;
   sub: <T extends keyof Subs>(id: T, fn: SubscriptionResolver<State, Subs, T>) => void;
   asyncSub: <T extends keyof Subs>(id: T, fn: SubscriptionResolver<State, Subs, T>) => void;
-  evt: <T extends keyof Events>(id: T, fn: EventHandler<State, Subs, Events, T>) => void;
+  event: <T extends keyof Events>(id: T, fn: EventHandler<State, Subs, Events, T>) => void;
 };
 
 export function createRegistry<
@@ -39,7 +39,7 @@ export function createRegistry<
     asyncSub(id, fn) {
       subscriptions[id] = { fn, async: true };
     },
-    evt(id, fn) {
+    event(id, fn) {
       events[id] = { fn };
     },
   };

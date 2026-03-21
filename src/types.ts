@@ -1,10 +1,10 @@
 import type { StoreApi } from 'zustand';
 
 export type Sub<Params, Result> = { params: Params; result: Result };
-export type Evt<Params> = { params: Params };
+export type Event<Params> = { params: Params };
 
 export type StoreSubs = Record<string, Sub<any, any>>;
-export type StoreEvents = Record<string, Evt<any>>;
+export type StoreEvents = Record<string, Event<any>>;
 
 export type Slice<State> = () => Partial<State>;
 

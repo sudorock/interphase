@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 import { createRegistry, createStore } from '../src/index';
-import type { Sub, Evt, Slice } from '../src/index';
+import type { Sub, Event, Slice } from '../src/index';
 
 type State = { count: number; label: string; flag: boolean };
 
@@ -14,11 +14,11 @@ type Subs = {
 };
 
 type Events = {
-  increment: Evt<void>;
-  setCount: Evt<{ value: number }>;
-  setLabel: Evt<{ value: string }>;
-  toggleFlag: Evt<void>;
-  setBoth: Evt<{ count: number; label: string }>;
+  increment: Event<void>;
+  setCount: Event<{ value: number }>;
+  setLabel: Event<{ value: string }>;
+  toggleFlag: Event<void>;
+  setBoth: Event<{ count: number; label: string }>;
 };
 
 export type { State, Subs, Events };
@@ -33,27 +33,27 @@ export function createTestStore() {
   registry.sub('stats', ({ state }) => ({ count: state.count, label: state.label }));
   registry.asyncSub('asyncCount', async ({ state }) => state.count);
 
-  registry.evt('increment', ({ setState }) => {
+  registry.event('increment', ({ setState }) => {
     setState(((draft: State) => {
       draft.count++;
     }));
   });
-  registry.evt('setCount', ({ setState, params }) => {
+  registry.event('setCount', ({ setState, params }) => {
     setState(((draft: State) => {
       draft.count = params.value;
     }));
   });
-  registry.evt('setLabel', ({ setState, params }) => {
+  registry.event('setLabel', ({ setState, params }) => {
     setState(((draft: State) => {
       draft.label = params.value;
     }));
   });
-  registry.evt('toggleFlag', ({ setState }) => {
+  registry.event('toggleFlag', ({ setState }) => {
     setState(((draft: State) => {
       draft.flag = !draft.flag;
     }));
   });
-  registry.evt('setBoth', ({ setState, params }) => {
+  registry.event('setBoth', ({ setState, params }) => {
     setState(((draft: State) => {
       draft.count = params.count;
       draft.label = params.label;
