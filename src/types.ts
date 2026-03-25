@@ -8,12 +8,12 @@ export type StoreEvents = Record<string, Event<any>>;
 
 export type Slice<State> = () => Partial<State>;
 
-export type Read<Subs extends StoreSubs> = <T extends keyof Subs>(
+export type FetchSub<Subs extends StoreSubs> = <T extends keyof Subs>(
   id: T,
   params?: Subs[T]['params']
 ) => Subs[T]['result'];
 
-export type Dispatch<Events extends StoreEvents> = <T extends keyof Events>(
+export type DispatchEvent<Events extends StoreEvents> = <T extends keyof Events>(
   id: T,
   params?: Events[T]['params']
 ) => void | Promise<void>;
@@ -69,9 +69,9 @@ export type EventHandlerArgs<
 > = {
   setState: (updater: State | Partial<State> | ((draft: State) => void)) => void;
   getState: StoreApi<State>['getState'];
-  read: Read<Subs>;
+  fetchSub: FetchSub<Subs>;
   params: Events[T]['params'];
-  dispatch: Dispatch<Events>;
+  dispatchEvent: DispatchEvent<Events>;
   invalidateAsyncSub: InvalidateAsyncSub<Subs>;
   invalidateAsyncSubs: InvalidateAsyncSubs<Subs>;
   replaceAsyncSub: ReplaceAsyncSub<Subs>;

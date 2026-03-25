@@ -180,7 +180,7 @@ describe('useEvent', () => {
     expect(screen.getByTestId('count').textContent).toBe('2');
   });
 
-  it('event handler uses read() to access current sub value', () => {
+  it('event handler uses fetchSub() to access current sub value', () => {
     type RSubs = { count: Sub<void, number>; doubled: Sub<void, number> };
     type REvents = { setCountFromDoubled: Event<void> };
     type RState = { count: number };
@@ -188,8 +188,8 @@ describe('useEvent', () => {
     const registry = createRegistry<RState, RSubs, REvents>();
     registry.sub('count', ({ state }) => state.count);
     registry.sub('doubled', ({ state }) => state.count * 2);
-    registry.event('setCountFromDoubled', ({ read, setState }) => {
-      const doubled = read('doubled');
+    registry.event('setCountFromDoubled', ({ fetchSub, setState }) => {
+      const doubled = fetchSub('doubled');
       setState(((draft: RState) => { draft.count = doubled; }));
     });
 
@@ -230,9 +230,9 @@ describe('useEvent', () => {
     registry.event('increment', ({ setState }) => {
       setState(((draft: DState) => { draft.count++; }));
     });
-    registry.event('doubleIncrement', ({ dispatch }) => {
-      dispatch('increment');
-      dispatch('increment');
+    registry.event('doubleIncrement', ({ dispatchEvent }) => {
+      dispatchEvent('increment');
+      dispatchEvent('increment');
     });
 
     const { useSub, useEvent, StoreProvider } = createStore<DState, DSubs, DEvents>({

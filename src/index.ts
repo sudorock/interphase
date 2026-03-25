@@ -15,8 +15,10 @@ export type { SubHook, EventHook, BoundEventHook } from './types';
 
 // Event handling
 export type {
+  DispatchEvent,
   EventHandler,
   EventHandlerArgs,
+  FetchSub,
   SubscriptionArgs,
   SubscriptionResolver,
 } from './types';

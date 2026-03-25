@@ -82,8 +82,8 @@ event('todo.draft/set', ({ params, setState }) => {
   });
 });
 
-event('todo/create', ({ read, setState }) => {
-  const draft = read('todo.draft/value')?.trim();
+event('todo/create', ({ fetchSub, setState }) => {
+  const draft = fetchSub('todo.draft/value')?.trim();
 
   if (!draft) {
     return;

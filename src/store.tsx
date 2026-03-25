@@ -12,11 +12,11 @@ import { createStore as createStateStore } from 'zustand/vanilla';
 import type { Registry } from './registry';
 import type {
   BoundEventHook,
-  Dispatch,
+  DispatchEvent,
   EventHook,
+  FetchSub,
   InvalidateAsyncSub,
   InvalidateAsyncSubs,
-  Read,
   ReplaceAsyncSub,
   ReplaceAsyncSubs,
   Slice,
@@ -131,7 +131,7 @@ export function createStore<
       }
     };
 
-    const read: Read<Subs> = (id, params?) => {
+    const fetchSub: FetchSub<Subs> = (id, params?) => {
       const subscription = registry.subscriptions[id]!;
 
       return subscription.async
@@ -139,14 +139,14 @@ export function createStore<
         : (subscription.fn({ state: getState(), params }) as Subs[typeof id]['result']);
     };
 
-    const dispatch: Dispatch<Events> = (id, params?) => {
+    const dispatchEvent: DispatchEvent<Events> = (id, params?) => {
       const event = registry.events[id]!;
       return event.fn({
         setState,
         getState,
         params,
-        read,
-        dispatch,
+        fetchSub,
+        dispatchEvent,
         invalidateAsyncSub,
         invalidateAsyncSubs,
         replaceAsyncSub,
@@ -169,7 +169,7 @@ export function createStore<
     };
 
     const useEventImpl: EventHook<Events> = (id) => {
-      return useCallback((params) => dispatch(id, params), [id]);
+      return useCallback((params) => dispatchEvent(id, params), [id]);
     };
 
     return { stateStore, queryClient, useSubImpl, useEventImpl };

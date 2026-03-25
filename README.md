@@ -55,8 +55,8 @@ asyncSub('todo/items', async ({ params }) => {
   return res.json();
 });
 
-event('todo/create', async ({ params, invalidateAsyncSub, read }) => {
-  const sortBy = read('todo/sort-by');
+event('todo/create', async ({ params, invalidateAsyncSub, fetchSub }) => {
+  const sortBy = fetchSub('todo/sort-by');
   await fetch('/api/todos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -65,8 +65,8 @@ event('todo/create', async ({ params, invalidateAsyncSub, read }) => {
   await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
 
-event('todo/toggle', async ({ params, invalidateAsyncSub, read }) => {
-  const sortBy = read('todo/sort-by');
+event('todo/toggle', async ({ params, invalidateAsyncSub, fetchSub }) => {
+  const sortBy = fetchSub('todo/sort-by');
   await fetch(`/api/todos/${params.id}/toggle`, { method: 'POST' });
   await invalidateAsyncSub(['todo/items', { sortBy }]);
 });
@@ -153,9 +153,13 @@ asyncSub('todo/items', async ({ params }) => {
 
 ### `event(id, handler)`
 
-Registers an event handler. The handler receives `{ setState, getState, read, params, dispatch, invalidateAsyncSub, invalidateAsyncSubs, replaceAsyncSub, replaceAsyncSubs }`.
+Registers an event handler. The handler receives `{ setState, getState, fetchSub, params, dispatchEvent, invalidateAsyncSub, invalidateAsyncSubs, replaceAsyncSub, replaceAsyncSubs }`.
 
 `setState` uses immer. Mutate the draft directly.
+
+`fetchSub(id, params?)` reads the current value of a subscription.
+
+`dispatchEvent(id, params?)` runs another event from inside the current event handler.
 
 ```ts
 event('todo.sort-by/set', ({ params, setState }) => {
@@ -168,14 +172,23 @@ event('todo.sort-by/set', ({ params, setState }) => {
 Event handlers can invalidate async subscriptions to trigger a refetch:
 
 ```ts
-event('todo/create', async ({ params, invalidateAsyncSub, read }) => {
-  const sortBy = read('todo/sort-by');
+event('todo/create', async ({ params, invalidateAsyncSub, fetchSub }) => {
+  const sortBy = fetchSub('todo/sort-by');
   await fetch('/api/todos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: params.text }),
   });
   await invalidateAsyncSub(['todo/items', { sortBy }]);
+});
+```
+
+Event handlers can compose other events:
+
+```ts
+event('todo/toggle-twice', ({ params, dispatchEvent }) => {
+  dispatchEvent('todo/toggle', { id: params.id });
+  dispatchEvent('todo/toggle', { id: params.id });
 });
 ```
 
