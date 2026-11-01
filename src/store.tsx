@@ -4,10 +4,10 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import {
+  type Context,
   createContext,
   memo,
   type ReactNode,
-  use,
   useCallback,
   useContext,
   useMemo,
@@ -18,6 +18,7 @@ import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { useShallow } from 'zustand/react/shallow';
 import { createStore as createStateStore } from 'zustand/vanilla';
+import { hashKey } from './hash';
 import type { Registry } from './registry';
 import type {
   BoundEventHook,
@@ -34,36 +35,10 @@ import type {
   SubHook,
 } from './types';
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (Object.prototype.toString.call(value) !== '[object Object]') return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === null || prototype === Object.prototype;
-}
-
-function hashKey(value: unknown): string {
-  return JSON.stringify(value, (_, val) =>
-    isPlainObject(val)
-      ? Object.keys(val).sort().reduce((result, key) => {
-          result[key] = val[key];
-          return result;
-        }, {} as Record<string, unknown>)
-      : val
-  );
-}
-
-type StoreContextType = {
-  useSubImpl: (id: any, params?: any) => any;
-  useEventImpl: (id: any) => (params?: any) => void | Promise<void>;
+export type StoreContextType<Subs extends StoreSubs, Events extends StoreEvents> = {
+  useSubImpl: SubHook<Subs>;
+  useEventImpl: EventHook<Events>;
 };
-
-const StoreContext = createContext<StoreContextType>({
-  useSubImpl: () => {
-    throw new Error('"useSub" called outside a StoreProvider');
-  },
-  useEventImpl: () => {
-    throw new Error('"useEvent" called outside a StoreProvider');
-  },
-});
 
 export type CreateStoreArgs<
   State extends object,
@@ -74,24 +49,6 @@ export type CreateStoreArgs<
   registry: Registry<State, Subs, Events>;
 };
 
-type MockSubValue<Result> = Result | Promise<Result>;
-
-export type MockSubs<Subs extends StoreSubs> = {
-  [K in keyof Subs]?:
-    | MockSubValue<Subs[K]['result']>
-    | ((params: Subs[K]['params']) => MockSubValue<Subs[K]['result']>);
-};
-
-export type MockEvents<Events extends StoreEvents> = {
-  [K in keyof Events]?: (params: Events[K]['params']) => void | Promise<void>;
-};
-
-export type MockStoreProviderProps<Subs extends StoreSubs, Events extends StoreEvents> = {
-  subs: MockSubs<Subs>;
-  events: MockEvents<Events>;
-  children: ReactNode;
-};
-
 export type StoreBundle<
   Subs extends StoreSubs,
   Events extends StoreEvents,
@@ -100,6 +57,7 @@ export type StoreBundle<
   useSub: SubHook<Subs>;
   useEvent: EventHook<Events>;
   useBoundEvent: BoundEventHook<Events>;
+  context: Context<StoreContextType<Subs, Events>>;
 };
 
 export function createStore<
@@ -107,6 +65,15 @@ export function createStore<
   Subs extends StoreSubs,
   Events extends StoreEvents,
 >({ slices, registry }: CreateStoreArgs<State, Subs, Events>): StoreBundle<Subs, Events> {
+  const StoreContext = createContext<StoreContextType<Subs, Events>>({
+    useSubImpl: () => {
+      throw new Error('"useSub" called outside a StoreProvider');
+    },
+    useEventImpl: () => {
+      throw new Error('"useEvent" called outside a StoreProvider');
+    },
+  });
+
   function createProviderScope() {
     const initialState = slices.reduce<Partial<State>>((acc, slice) => {
       return Object.assign(acc, slice());
@@ -229,7 +196,7 @@ export function createStore<
     }
     const { queryClient, useSubImpl, useEventImpl } = scopeRef.current;
 
-    const ctx = useMemo<StoreContextType>(
+    const ctx = useMemo(
       () => ({
         useSubImpl,
         useEventImpl,
@@ -249,29 +216,6 @@ export function createStore<
     useSub,
     useEvent,
     useBoundEvent,
+    context: StoreContext,
   };
-}
-
-export function createMockStore<Subs extends StoreSubs, Events extends StoreEvents>() {
-  const MockStoreProvider = ({ subs, events, children }: MockStoreProviderProps<Subs, Events>) => {
-    const ctx = useMemo<StoreContextType>(
-      () => ({
-        useSubImpl: (id, params) => {
-          const value = subs[id as keyof Subs];
-          const result = typeof value === 'function' ? value(params) : value;
-          return result instanceof Promise ? use(result) : result;
-        },
-        useEventImpl: (id) =>
-          useCallback(
-            (params: Events[keyof Events]['params']) => events[id as keyof Events]!(params),
-            [id]
-          ),
-      }),
-      [subs, events]
-    );
-
-    return <StoreContext.Provider value={ctx}>{children}</StoreContext.Provider>;
-  };
-
-  return { MockStoreProvider };
 }

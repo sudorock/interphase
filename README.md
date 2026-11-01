@@ -194,7 +194,7 @@ event('todo/toggle-twice', ({ params, dispatchEvent }) => {
 
 ### `createStore({ registry, slices })`
 
-Creates the store from a registry and initial state slices. Returns `{ StoreProvider, useSub, useEvent, useBoundEvent }`. The hooks read one shared context, so a subtree has one active provider: the innermost `StoreProvider` or `MockStoreProvider`.
+Creates the store from a registry and initial state slices. Returns `{ StoreProvider, useSub, useEvent, useBoundEvent, context }`. `context` is the React context this store's hooks read; `createMockStore` provides into it.
 
 Each slice is a function returning a partial state object. Slices are merged to form the initial state.
 
@@ -261,32 +261,29 @@ const TodoList = suspensify(function TodoList() {
 <TodoList fallback={<p>Loading...</p>} />
 ```
 
-### `createMockStore<Subs, Events>()`
+### `createMockStore(store)`
 
-Returns `{ MockStoreProvider }`, a provider that answers `useSub` and `useEvent` from plain maps instead of a registry. Components keep importing hooks from the real store module; only the provider changes. Built for Storybook and tests.
+Exported from `@aktopia/interphase/mock`. Takes the `createStore` bundle and returns `{ MockStoreProvider }`, a provider that answers that store's `useSub` and `useEvent` from plain maps instead of its registry. Components keep importing hooks from the store module; only the provider changes. Built for Storybook and tests.
 
-`subs` maps each subscription id to a value, or to a function of its params. A `Promise` value suspends until it settles, so a pending promise renders the nearest `suspensify` fallback and a rejected one reaches the error boundary. Keep promise instances stable across renders. `events` maps each event id to a handler.
+`subs` maps a subscription id to a value, or to a function of its params. Each id + params pair resolves once per `subs` object, so a function returning a promise suspends once. A `Promise` value suspends until it settles: pending renders the nearest `suspensify` fallback, rejected reaches the error boundary. `events` maps an event id to a handler. Both props are optional; reading an id with no entry throws.
 
 ```tsx
-import { createMockStore } from '@aktopia/interphase';
+import { createMockStore } from '@aktopia/interphase/mock';
+import { store } from './store';
 
-const { MockStoreProvider } = createMockStore<Subs, Events>();
-
-const pending = new Promise<never>(() => {});
+const { MockStoreProvider } = createMockStore(store);
 
 <MockStoreProvider
   subs={{
     'todo/sort-by': 'created',
     'todo/items': ({ sortBy }) => (sortBy === 'created' ? byCreated : byTitle),
-    'todo/count': pending,
+    'todo/count': new Promise<never>(() => {}),
   }}
   events={{ 'todo/create': (params) => console.log('create', params) }}
 >
   <TodoList />
 </MockStoreProvider>
 ```
-
-Requires React 19 (`use`).
 
 ## `remoteSub` pattern
 
