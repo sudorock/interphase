@@ -1,10 +1,11 @@
 // Core
 export { createRegistry } from './registry';
-export { createStore } from './store';
+export { createMockStore, createStore } from './store';
 export { suspensify } from './suspensify';
 
 // Core types
 export type { Registry } from './registry';
+export type { MockEvents, MockStoreProviderProps, MockSubs } from './store';
 export type { SuspensifyProps } from './suspensify';
 
 // Domain primitives

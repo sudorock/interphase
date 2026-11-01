@@ -3,7 +3,16 @@ import {
   QueryClientProvider,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createContext, memo, type ReactNode, useCallback, useContext, useMemo, useRef } from 'react';
+import {
+  createContext,
+  memo,
+  type ReactNode,
+  use,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+} from 'react';
 import { useStore } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -42,6 +51,20 @@ function hashKey(value: unknown): string {
   );
 }
 
+type StoreContextType = {
+  useSubImpl: (id: any, params?: any) => any;
+  useEventImpl: (id: any) => (params?: any) => void | Promise<void>;
+};
+
+const StoreContext = createContext<StoreContextType>({
+  useSubImpl: () => {
+    throw new Error('"useSub" called outside a StoreProvider');
+  },
+  useEventImpl: () => {
+    throw new Error('"useEvent" called outside a StoreProvider');
+  },
+});
+
 export type CreateStoreArgs<
   State extends object,
   Subs extends StoreSubs,
@@ -49,6 +72,24 @@ export type CreateStoreArgs<
 > = {
   slices: Array<Slice<State>>;
   registry: Registry<State, Subs, Events>;
+};
+
+type MockSubValue<Result> = Result | Promise<Result>;
+
+export type MockSubs<Subs extends StoreSubs> = {
+  [K in keyof Subs]?:
+    | MockSubValue<Subs[K]['result']>
+    | ((params: Subs[K]['params']) => MockSubValue<Subs[K]['result']>);
+};
+
+export type MockEvents<Events extends StoreEvents> = {
+  [K in keyof Events]?: (params: Events[K]['params']) => void | Promise<void>;
+};
+
+export type MockStoreProviderProps<Subs extends StoreSubs, Events extends StoreEvents> = {
+  subs: MockSubs<Subs>;
+  events: MockEvents<Events>;
+  children: ReactNode;
 };
 
 export type StoreBundle<
@@ -66,22 +107,6 @@ export function createStore<
   Subs extends StoreSubs,
   Events extends StoreEvents,
 >({ slices, registry }: CreateStoreArgs<State, Subs, Events>): StoreBundle<Subs, Events> {
-  type StoreContextType = {
-    useSubImpl: SubHook<Subs>;
-    useEventImpl: EventHook<Events>;
-  };
-
-  const placeholderContext: StoreContextType = {
-    useSubImpl: (_id, _params) => {
-      throw new Error('"useSub" not set for StoreContext');
-    },
-    useEventImpl: (_id) => {
-      throw new Error('"useEvent" not set for StoreContext');
-    },
-  };
-
-  const StoreContext = createContext<StoreContextType>(placeholderContext);
-
   function createProviderScope() {
     const initialState = slices.reduce<Partial<State>>((acc, slice) => {
       return Object.assign(acc, slice());
@@ -198,13 +223,13 @@ export function createStore<
   };
 
   const StoreProvider = memo(({ children }: { children: ReactNode }) => {
-    const scopeRef = useRef<ReturnType<typeof createProviderScope>>();
+    const scopeRef = useRef<ReturnType<typeof createProviderScope> | null>(null);
     if (!scopeRef.current) {
       scopeRef.current = createProviderScope();
     }
     const { queryClient, useSubImpl, useEventImpl } = scopeRef.current;
 
-    const ctx = useMemo(
+    const ctx = useMemo<StoreContextType>(
       () => ({
         useSubImpl,
         useEventImpl,
@@ -225,4 +250,28 @@ export function createStore<
     useEvent,
     useBoundEvent,
   };
+}
+
+export function createMockStore<Subs extends StoreSubs, Events extends StoreEvents>() {
+  const MockStoreProvider = ({ subs, events, children }: MockStoreProviderProps<Subs, Events>) => {
+    const ctx = useMemo<StoreContextType>(
+      () => ({
+        useSubImpl: (id, params) => {
+          const value = subs[id as keyof Subs];
+          const result = typeof value === 'function' ? value(params) : value;
+          return result instanceof Promise ? use(result) : result;
+        },
+        useEventImpl: (id) =>
+          useCallback(
+            (params: Events[keyof Events]['params']) => events[id as keyof Events]!(params),
+            [id]
+          ),
+      }),
+      [subs, events]
+    );
+
+    return <StoreContext.Provider value={ctx}>{children}</StoreContext.Provider>;
+  };
+
+  return { MockStoreProvider };
 }

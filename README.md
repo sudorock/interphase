@@ -18,7 +18,7 @@ npm install @aktopia/interphase
 
 Package: [@aktopia/interphase](https://www.npmjs.com/package/@aktopia/interphase)
 
-Peer dependencies: `react`, `zustand`, `@tanstack/react-query`.
+Peer dependencies: `react` 19, `zustand`, `@tanstack/react-query`.
 Direct dependency (bundled): `immer`.
 
 ## Quick start
@@ -194,7 +194,7 @@ event('todo/toggle-twice', ({ params, dispatchEvent }) => {
 
 ### `createStore({ registry, slices })`
 
-Creates the store from a registry and initial state slices. Returns `{ StoreProvider, useSub, useEvent, useBoundEvent }`.
+Creates the store from a registry and initial state slices. Returns `{ StoreProvider, useSub, useEvent, useBoundEvent }`. The hooks read one shared context, so a subtree has one active provider: the innermost `StoreProvider` or `MockStoreProvider`.
 
 Each slice is a function returning a partial state object. Slices are merged to form the initial state.
 
@@ -260,6 +260,33 @@ const TodoList = suspensify(function TodoList() {
 
 <TodoList fallback={<p>Loading...</p>} />
 ```
+
+### `createMockStore<Subs, Events>()`
+
+Returns `{ MockStoreProvider }`, a provider that answers `useSub` and `useEvent` from plain maps instead of a registry. Components keep importing hooks from the real store module; only the provider changes. Built for Storybook and tests.
+
+`subs` maps each subscription id to a value, or to a function of its params. A `Promise` value suspends until it settles, so a pending promise renders the nearest `suspensify` fallback and a rejected one reaches the error boundary. Keep promise instances stable across renders. `events` maps each event id to a handler.
+
+```tsx
+import { createMockStore } from '@aktopia/interphase';
+
+const { MockStoreProvider } = createMockStore<Subs, Events>();
+
+const pending = new Promise<never>(() => {});
+
+<MockStoreProvider
+  subs={{
+    'todo/sort-by': 'created',
+    'todo/items': ({ sortBy }) => (sortBy === 'created' ? byCreated : byTitle),
+    'todo/count': pending,
+  }}
+  events={{ 'todo/create': (params) => console.log('create', params) }}
+>
+  <TodoList />
+</MockStoreProvider>
+```
+
+Requires React 19 (`use`).
 
 ## `remoteSub` pattern
 
